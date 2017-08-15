@@ -10,12 +10,18 @@ library(purrr)
 library(futile.logger)
 library(stringr)
 library(data.table)
+library(Hmisc)
 
 source("util.R")
+source("generate.R")
+source("generate_test_data.R")
 source("ftn2.R")
 source("plotly_bar.R")
 
 shinyServer(function(input, output, session) {
+
+   source('pesame.R', local = TRUE)
+   source('helper.R', local = TRUE)
 
   factorizedDataList <- reactive({
      isolate({
@@ -270,7 +276,11 @@ shinyServer(function(input, output, session) {
        return("No data loaded")
     }
 
-    numDisplayed <- nrow(filteredData())
+    if(is.null(filteredData())) {
+      numDisplayed <- 0
+    } else {
+      numDisplayed <- nrow(filteredData())
+    }
     totalRows <- nrow(mvdata)
  
     msg <- paste("Displaying ", numDisplayed , " of ", totalRows,

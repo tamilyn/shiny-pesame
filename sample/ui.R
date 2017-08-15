@@ -45,9 +45,9 @@ analyze_panel <- verticalLayout(
 generate_panel <- 
   mainPanel(
     selectInput("dataSource", "Data Source:",
-                c("Generate Random Data" = "random",
-                  "Load combined rdata, otut, f" = "legacy",
-                  "Load separate csv data and metadata" = "combine")),
+                c("Generate Random Data" = "random" )), #,
+                  #"Load combined rdata, otut, f" = "legacy",
+                  #"Load separate csv data and metadata" = "combine")),
     
     conditionalPanel(condition = "input.dataSource == 'random'", 
         fluidRow( includeMarkdown("generate_test_data.md") ),
