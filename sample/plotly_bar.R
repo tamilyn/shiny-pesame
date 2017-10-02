@@ -31,8 +31,7 @@
     
     hover.text = paste(dd$Names, " Auc ",round(dd$auc,2)," high: ", round(dd$high,2), "low", round(dd$low,2))
     
-    dd$colorxx = map_chr(dd$Enriched, ~ to_color(.)) 
-  
+    #dd$colorxx = map_chr(dd$Enriched, ~ to_color(.)) 
     p <- 
       plot_ly( dd, x = ~dd$heights, y = ~dd$Names, type = 'bar' 
               , text = hover.text

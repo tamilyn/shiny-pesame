@@ -47,6 +47,7 @@ get_factor_details <- function(md, m) {
              process_type = process_type )
 }
 
+
 # maybe make this a data_frame
 get_option_text <- function(md, m) {
   nn = names(summary(md[ , m]))
@@ -80,4 +81,15 @@ all_factor_details <- function(md) {
   if(is.null(md)) { return(NULL) }
   details = map(1:ncol(md), ~ get_factor_details(md, .))
   bind_rows(details)
+}
+
+new_factor_details <- function(md) {
+  mtypes <- apply(md, 2, class)
+  #browser()
+  uniqvals <- apply(md, 2, function(x) { length(unique(x)) } )
+  df <- data_frame(type=mtypes, uniqvals = uniqvals,
+          name=colnames(md),  description=colnames(md)) %>% 
+          mutate(ready = ifelse(uniqvals != 2, FALSE, TRUE),
+                 description = ifelse(ready, name, str_c(name, sep=" "))) 
+  df
 }

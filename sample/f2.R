@@ -10,13 +10,10 @@ apply_factorization <- function(d) {
   return(as.factor(newdata))
 }
 
-factorize_data <- function(md) {
-  if(is.null(md)) {
-    print("Factorize data , NULL")
-    return(NULL)
-  }
+factorize_data <- function(lst) {
+  data <- lst[["mvdata"]]
+  md <- lst[["metadata"]]
 
-  browser()
   ff <- all_factor_details(md)
   mdnew <- md
   labels <- vector(mode="character", length = ncol(md))
@@ -27,6 +24,11 @@ factorize_data <- function(md) {
       mdnew[, i] <- apply_factorization(md[, i])
     }
   }
-  list(metadata = mdnew, labels = labels, factornames = colnames(md))
+
+  ffdata <- mdnew
+  newlist <- list("mvdata" = lst[["mvdata"]],
+                  "origmetadata" = lst[["metadata"]],
+                  labels = labels, #ff,
+                  "metadata" = ffdata)
 }
 
