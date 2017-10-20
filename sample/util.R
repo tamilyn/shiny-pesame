@@ -85,11 +85,23 @@ all_factor_details <- function(md) {
 
 new_factor_details <- function(md) {
   mtypes <- apply(md, 2, class)
-  #browser()
   uniqvals <- apply(md, 2, function(x) { length(unique(x)) } )
-  df <- data_frame(type=mtypes, uniqvals = uniqvals,
-          name=colnames(md),  description=colnames(md)) %>% 
-          mutate(ready = ifelse(uniqvals != 2, FALSE, TRUE),
+  uniqvalues <- apply(md, 2, function(x) { 
+         vv <- unique(x)
+         if(length(vv) < 10) { 
+           str_c(vv, collapse= ", ") 
+         } else { 
+           str_c("num unique values: ", length(unique(x))) 
+         }} )
+
+  df <- data_frame(type = mtypes, 
+                   uniqvals = uniqvals,
+                   uniqvalues = uniqvalues,
+                   name = colnames(md), 
+                   description = colnames(md)) %>% 
+          mutate(methodapplied = "none",
+                 ready = ifelse(uniqvals != 2, FALSE, TRUE),
                  description = ifelse(ready, name, str_c(name, sep=" "))) 
+  
   df
 }

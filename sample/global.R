@@ -1,5 +1,7 @@
 library(RColorBrewer)
 
+source("excelFileModule.R")
+
 ## fileFormats ---- 
 fileFormats = c('text/csv',
                 'text/comma-separated-values', 
@@ -15,8 +17,7 @@ trim <- function(x) gsub("^\\s+|\\s+$","",x)
 
 ## significance.options ----
 significance.options <- list(
-  "5.0"           = 5.0,
-  "1.0"           = 1.0,
+  "5.5"           = 5.5,
   "0.5"           = 0.5,
   "0.2"           = 0.2,
   "0.1"           = 0.1,
@@ -33,14 +34,29 @@ significance.options <- list(
 
 significance.options.default = significance.options[3]
 
-method.options.all = list("holm" = "holm", "hochberg" = "hochberg",
-                      "hommel" = "hommel", "bonferroni" = "bonferroni",
-               "BH" = "BH","BY" = "BY", "fdr" = "fdr","none" = "none")
+#----
+method.options.all = list("holm" = "holm", 
+     "hochberg" = "hochberg", 
+     "hommel" = "hommel", 
+     "bonferroni" = "bonferroni",
+     "BH" = "BH",
+     "BY" = "BY", 
+     "fdr" = "fdr",
+     "none" = "none")
+
 method.options = list( "bonferroni" = "bonferroni","fdr" = "fdr")
 
 method.options.default = "fdr"
 
+
+#----
+input.options = list( "Excel" = "excel", 
+                      "CSV" = "csv", 
+                      "Rdata" = "rdata")
+
+input.options.default = "excel"
   
+#----
 bar_colors = brewer.pal(5, "Set2")
 
 to_color <- function(q) {
@@ -51,3 +67,5 @@ to_color <- function(q) {
     }
     return(r)
 }
+
+

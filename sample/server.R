@@ -12,10 +12,12 @@ library(stringr)
 library(DT)
 library(data.table)
 library(Hmisc)
+library(openxlsx)
+library(readxl)
 
 source("util.R")
 source("generate.R")
-source("generate_test_data.R")
+#source("generate_test_data.R")
 source("ftn2.R")
 source("plotly_bar.R")
 
@@ -24,10 +26,14 @@ shinyServer(function(input, output, session) {
   source('pesame.R', local = TRUE)
   source('helper.R', local = TRUE)
 
+  excel_datafile <- callModule(excelFile, "excel_datafile")
+  excel_metadatafile <- callModule(excelFile, "excel_metadatafile")
+
   ###-- BEGIN reactive values ----
   availableFactors <- reactiveVal(list())
-  unprocessedFactors <- reactiveVal(list())
   allOriginalFactor <- reactiveVal(list())
+  factorDetails <- reactiveVal(list())
+  computedDetails <- reactiveVal(list())
 
   metadata <- reactiveVal(NULL)
   mvdata <- reactiveVal(NULL)
@@ -46,25 +52,27 @@ shinyServer(function(input, output, session) {
        print("NO FACTOR")
        return(NULL)
     }
-    #print("theSelected")
-    #print(dim(fd))
-    #print(rownames(fd))
-    #print(colnames(fd))
     fd[, input$selectedFactor]
   })
 
   get_tft <- reactive({
+
+    print("56: get_tft NOT TRANSPOSING ANYMORE")
     mdata <- mvdata()
     if(is.null(mdata)) return(NULL)
-    t_tft <- t(mdata)
+    
+    t_tft <- mdata
+    ##print("62: get_tft")
 
     rownames(t_tft) <- colnames(mdata)
-
-    #print("DIM of t_tft")
-    #print(dim(t_tft))
-    #print(rownames(t_tft))
-    #print(colnames(t_tft))
+    print("65: get_tft")
     t_tft
+  })
+
+  observeEvent(input$refresh, {
+      print("REFRESH")
+      processDataFileSheet()
+      processTestdataFile()
   })
 
   # baseFilteredData ----
@@ -76,13 +84,18 @@ shinyServer(function(input, output, session) {
     bd = suppressWarnings(helper.data_by_auc( tft,
           theSelectedFactor(), input$adj_method))
 
-    print("DIM of bd")
-    print(dim(bd))
-
     ft <- bd
+    if(!is.matrix(ft)) {
+      #print("converting to matrix")
+      #print(dim(ft))
+      if(is.null(ft)) {
+        #print("83: HEY IT IS NULL")
+        return(NULL)
+      } 
+      ft <- as.matrix(ft)
+    }
+      #print("78: after converting to matrix")
 
-    #rownames(ft) <- colnames(mdata)
-    #colnames(ft) <- colnames(mdata)
     sf <- as.numeric(input$signficance_threshold)
     filt = (ft["p.adjust", ] < sf) & !is.na(ft["p.adjust", ])
     t(ft[, filt, drop=F])
@@ -103,19 +116,19 @@ shinyServer(function(input, output, session) {
   # Get data with adjust method applied, then apply p.value filter,
   # transpose result.
   filteredData <- reactive({
+    #print("98: filteredData")
     b <- baseFilteredData()
+    #print("108: filteredData")
     if(is.null(b)) {
       print("NO BASE FILTERED DATA")
       return(NULL)
     }
+    #print("113: filteredData")
 
     if (nrow(b) == 0) {
       print("127: no data")
       return(NULL)
     }
-    #browser()
-    print("filteredData")
-    print(head(b))
 
     dd = as.data.frame(b)
     ticks = generateTicks(dd)
@@ -216,17 +229,10 @@ shinyServer(function(input, output, session) {
 
     f = theSelectedFactor()
     dd$Enriched = levels(f)[(dd$auc<.5) + 1]
-    #print(str_c("filteredPlotly: selected factor:"))
-
-    #print(head(f,2))
-    #print(rownames(dd))
-    #print(colnames(dd))
 
     dd$heights = dd$auc - 0.5
     dd$auc1 = dd$heights
     dd$Names = factor(rownames(dd), levels=rownames(dd)[order(dd$auc)])
-
-    #generate_bars(dd)
 
     generatePlot_ly(dd)
   })
@@ -272,14 +278,23 @@ shinyServer(function(input, output, session) {
     }
   })
 
+ # do this once when the data set is initially loaded
  initFactorVariables <- reactive({
    isolate({
+     print("initFactorVariables")
      mf = metadata()
+     #print(head(mf,2))
 
      cnames = colnames(mf)
-     if(length(cnames) > 1) {
-       details = new_factor_details(mf)
+     if(length(cnames) >= 1) {
+       details <- new_factor_details(mf) 
+       details <- details %>% 
+         mutate(idnum = 1:nrow(details))
+       factorDetails(details)
        setDetails(details)
+
+       cd <- computeDisplayDetails()
+       computedDetails(cd)
      }
    })
  })
@@ -298,7 +313,10 @@ shinyServer(function(input, output, session) {
  # observeEvent input$lastClick ----
   observeEvent(input$lastClick, {
     lid = input$lastClickId
+
     #print(paste("observeEvent$lastClick", input$lastClickId ))
+    #popup with the name, the method, 
+
     if (lid %like% "median") {
       row_to_split <- as.numeric(gsub("median_","",lid))
       print(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
@@ -316,114 +334,192 @@ shinyServer(function(input, output, session) {
       #showModal(modal_modify)
     }
    })
+
+
+
+ ##
+ # observeEvent input$lastClick ----
+  observeEvent(input$lastGroupClick, {
+    lid = input$lastGroupClickId
+
+    #print(paste("observeEvent$lastGroupClick", input$lastGroupClickId ))
+    #popup with the name, the method, 
+
+
+    print("DISABLED FOR NOW until we make the button operate on the right df")
+    return(NULL)
+
+    if (lid %like% "median") {
+      row_to_split <- as.numeric(gsub("median_","",lid))
+      print(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
+      applyFactorButton(row_to_split, "median")
+      #vals$Data <- vals$Data[-row_to_delete]
+    } else if (lid %like% "mean") {
+      row_to_split <- as.numeric(gsub("mean_","",lid))
+      print(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
+      applyFactorButton(row_to_split, "mean")
+      #vals$Data <- vals$Data[-row_to_delete]
+    } else if (lid %like% "modify") {
+      print("MODIFY")
+      row_to_modify <- as.numeric(gsub("modify_","",lid))
+      #print(str_c("MODIFYING that row", lid, row_to_modify, sep = " "))
+      #showModal(modal_modify)
+    }
+   })
+
+
+
  
- displayDetails <- reactive({
+ computeDisplayDetails <- reactive({
+   print("370: COMPUTE DISPLA DETAILS (of factors)")
    details <- allOriginalFactor() %>%
      arrange(ready) %>%
      mutate(look = ifelse(ready == FALSE, str_c("<b>",description,"</b>"), 
                           description)) %>%
-     mutate(status = ifelse(ready==FALSE, splitButtons(idnum), "Ready")) %>%
-     select(look, description, uniqvals, status) 
+     mutate(status = ifelse(ready==FALSE, splitButtons(idnum), "Ready")) # %>%
+     #select(look, description, uniqvals, status) 
  })
 
- output$allFactorsDataTable <- DT::renderDataTable({
+ displayDetails <- reactive({
+   d <- computedDetails()
+   print("RETURNING display details")
+   head(d)
+   d
+ })
 
+
+ output$allFactorsDataTable <- DT::renderDataTable({
    details <- displayDetails()
+   if(nrow(details) == 0) {
+      return(NULL)
+   }
    datatable(details, options = list(pageLength = 25),
-     caption = "Data Set Features (analysis can only be performed on 2 levels factors)", escape = FALSE)
+     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
+ })
+
+
+ output$groupFactorsDataTable <- DT::renderDataTable({
+   details <- displayDetails() %>% filter(type != "numeric")
+   if(nrow(details) == 0) {
+      return(NULL)
+   }
+   datatable(details, options = list(pageLength = 25),
+     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
+   
+ })
+
+
+ output$continuousFactorsDataTable <- DT::renderDataTable({
+
+   details <- displayDetails() %>% dplyr::filter(type == "numeric")
+   datatable(details, options = list(pageLength = 25),
+     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
  })
 
  #########
  #########
  ## output$factorVariables ----
  output$fp_factorVariables <- renderUI({
-   if( is.null(input$testdataFile) || is.null(testdataFileEnv()) ) {
-     return(tagList(h1("No data loaded")))
+
+   print("fp_factorVariables")
+   orig_md <- orig_metadata()
+
+   if(is.null(orig_md) ) {
+     return(h1("No factors to show because no meta data loaded"))
    }
 
-   orig_md <- orig_metadata()
+   #print("here - data loaded")
+   #print(str(orig_md,1))
+
+   details <- displayDetails() 
    return(tagList(
-      dataTableOutput("allFactorsDataTable"),
-      html(describe(orig_md, 
-          descript = "Data", 
-          exclude.missing = TRUE), scroll = TRUE),
-           ##rmarkdown = TRUE
+      div(str_c("All variables: ", str_c(details$name, collapse = ", "))),
+      tabsetPanel(type="tabs", 
+        #tabPanel("Description",
+        #  purrr::safely( 
+        #    html(describe(orig_md, descript = "Data", 
+        #       exclude.missing = TRUE), scroll = TRUE),
+        #  p("descriptions unavailable"))),
+
+        tabPanel("Continuous",
+          dataTableOutput("continuousFactorsDataTable")),
+
+        tabPanel("Group",
+          dataTableOutput("groupFactorsDataTable"),
+          p("Grouping features not ready"))),
 
       # each row has action buttons, notify shiny when clicked on
       tags$script("$(document).on('click', '#allFactorsDataTable button',
         function () {
           Shiny.onInputChange('lastClickId',this.id);
           Shiny.onInputChange('lastClick', Math.random())
-        });")))
+        });"),
+
+      tags$script("$(document).on('click', '#continuousFactorsDataTable button',
+        function () {
+          Shiny.onInputChange('lastClickId',this.id);
+          Shiny.onInputChange('lastClick', Math.random())
+        });"),
+
+      tags$script("$(document).on('click', '#groupFactorsDataTable button',
+        function () {
+          Shiny.onInputChange('lastClickId',this.id);
+          Shiny.onInputChange('lastClick', Math.random())
+        });")
+
+    ))
  })
 
+  ##############################################################
+  outputOptions(output, "hasFactorVariables",  suspendWhenHidden = FALSE)
 
- ##############################################################
- testdataFile <- reactive({
-   req(input$testdataFile)
-   print("got testdata File ")
- })
+  processDataFileSheet <- reactive({
+      print("DATA updated: processDataFileSheet")
+      df <- excel_datafile() 
 
- testdataFileEnv <- reactive({
-   req(input$testdataFile$name)
-
-   input_file_format <- tools::file_ext(input$testdataFile$name)
-   if(input_file_format == "RData") {
-     this_env <- new.env(parent <- emptyenv())
-     print("323: testdataFile")
-     load(input$testdataFile$datapath, envir = this_env)
-     return(this_env)
-     }
- })
-
-  output$testdataFileEnvLoaded <- reactive({ !is.null(testdataFileEnv()) })
-
-  outputOptions(output, "testdataFileEnvLoaded",  suspendWhenHidden=FALSE)
-  outputOptions(output, "hasFactorVariables",  suspendWhenHidden=FALSE)
+      mvdata(df)
+      orig_mvdata(df)
+  })
 
   processTestdataFile <- reactive({
-      req(testdataFileEnv())
+      print("METADATA updated: processTestdataFile")
+      df <- excel_metadatafile() 
 
-      print("processTestdataFile")
-      this_env <- testdataFileEnv()
-      if(is.null(this_env)) { return(NULL) }
+      # convert any character to factor
+      if(is.data.frame(df)) {
+        df <- df %>% 
+           mutate_if(is.character, as.factor) 
+      }
 
-      midpoint = median(this_env$l_md[, 1])
-      lastcol = ncol(this_env$l_md) + 1
-      #newcol = as.logical(this_env$l_md[ , 1] > midpoint)
-      #this_env$l_md <- cbind(this_env$l_md,newcol)
-
-      print("l_md")
-      print(head(this_env$l_md,2))
-
-      metadata(this_env$l_md)
-      orig_metadata(this_env$l_md)
-
-      mvdata(this_env$l_test)
-      orig_mvdata(this_env$l_test)
-
+      metadata(df)
+      orig_metadata(df) 
       initFactorVariables()
-
-      print(str_c("   414 393 l_test ", str_c(dim(this_env$l_test), collapse=",")))
-      print(str_c("   414 394 l_md ", str_c(dim(this_env$l_md), collapse=",")))
 
       return(TRUE)
   })
 
-
   output$mvdataDataTable <- renderDataTable({
-     #print(str_c("mvdataDataTable DATA ", nrow(mvdata())))
-     data.table(mvdata())
+     processDataFileSheet()
+     DT::datatable(mvdata())
+  })
+
+
+  # output#metadataUI ----
+  output$metadataUI <- renderUI({
+     req(processTestdataFile(), initFactorVariables(), orig_metadata())
+
+     h1("metadataUI")
+     DT::datatable(orig_metadata())
   })
 
   output$metadataDataTable <- renderDataTable({
-     #print(str_c("metadataDataTable DATA (orig)", nrow(orig_metadata())))
-     data.table(orig_metadata())
+     req(processTestdataFile(), initFactorVariables(), orig_metadata())
+     DT::datatable(orig_metadata())
   })
 
   setDetails <- function(details){
-       details <- details %>% 
-         mutate(idnum = 1:nrow(details))
+       #details <- details %>% 
+       #  mutate(idnum = 1:nrow(details))
 
        rdetails = details %>% dplyr::filter(ready)
        pdetails = details %>% dplyr::filter(!ready)
@@ -431,13 +527,13 @@ shinyServer(function(input, output, session) {
        af <- rdetails$description
        pf <- pdetails$description
 
-       print(str_c("setDetails: all: ", nrow(details), " available: ", nrow(af),
-        " need processing: ", nrow(pf) ))
+       print(str_c("setDetails: all: ", nrow(details), 
+                " available: ", nrow(rdetails),
+        " need processing: ", nrow(pdetails) ))
        print(head(details))
 
        allOriginalFactor(details)
        availableFactors(af)
-       unprocessedFactors(pf)
   }
   
   applyFactorButton <- function(ft, tp) {
@@ -456,14 +552,39 @@ shinyServer(function(input, output, session) {
     metadata(md)
 
     uniqvals <- apply(md, 2, function(x) { length(unique(x)) } )
-    details <- data_frame(uniqvals = uniqvals,
-        name=colnames(md), description=colnames(md)) %>%
+    #set_tp
+    # ft is name, eg Sph, 
+    #details$methodapplied[
+    orig <- allOriginalFactor()
+    details <- data_frame( uniqvals = uniqvals,
+                   name=colnames(md), 
+        description=colnames(md)) %>%
+        #mutate(methodapplied = ifelse(name == ft, str_c("applied ", tp), 
+        #         methodapplied)) %>%
+        mutate(idnum = 1:ncol(md)) %>%
         mutate(ready = ifelse(uniqvals != 2, FALSE, TRUE),
                description = ifelse(ready, name, str_c(name, sep=" ")))
 
+    if(!is.null(orig)) {
+      details$methodapplied = orig$methodapplied
+      details <- details %>% 
+         mutate(methodapplied = ifelse(name == ft, str_c("applied ", tp), 
+                 methodapplied)) 
+   }
+
+
+    mp <- round(midpoint,2)
+    cd <- computedDetails()
+    cd[ ft, "ready" ] <- TRUE
+    cd[ ft, "methodapplied" ] <- tp
+    cd[ ft, "description" ] <- 
+        str_c("0 = below or at ", tp, "<br/>",
+        "1 = above (", mp,")",sep = "")
+    computedDetails(cd)
     setDetails(details)
   }
 
+  # ----
   applyFactor <- reactive({
      isolate({
        ft <- input$fp_pselectedFactor
@@ -519,43 +640,5 @@ shinyServer(function(input, output, session) {
 
        setDetails(details)
   })
-
-  observeEvent(input$resetButton, {
-     print(str_c("461: reset "))
-
-     metadata(NULL)
-     mvdata(NULL)
-
-     availableFactors(list())
-     unprocessedFactors(list())
-
-     orig_metadata(NULL)
-     orig_mvdata(NULL)
-
-     print("465 after reset loaded")
-  })
-
-  output$loadedFilename <- renderText({
-    if (!is.null(input$testdataFile)) {
-      print(str_c("454: loadedFilename: ", input$testdataFile$name))
-      input$testdataFile$name
-    }
-  })
-
-  output$dataUploaded <- reactive({
-     this_env <- testdataFile()
-     if(is.null(this_env)) { return(FALSE)}
-     
-     print("dataUploaded")
-     b <- withProgress(
-       processTestdataFile(),
-       message = "Processing uploaded data...")
-
-     print("after dataUploaded")
-     #b <- processTestdataFile()
-     return(b)
-  })
-
-  outputOptions(output, 'dataUploaded', suspendWhenHidden=FALSE)
 
 })

@@ -6,7 +6,6 @@ library(markdown)
 library(RColorBrewer)
 library(DT)
 
-source("global.R")
 
 # Header ------------------------------------------------------------
 header <- dashboardHeader(
@@ -38,40 +37,42 @@ analyze_panel <- verticalLayout(
 
   tabsetPanel(type="tabs",
      tabPanel("Plotly", plotlyOutput("filteredPlotly")),
+     tabPanel("Data", p("not ready")), 
      #tabPanel("Plot", plotOutput("filteredPlot")),
      tabPanel( "Citation", tags$div(
        h1("Citation Information"),
          pre( textOutput("citation") ))))))
 
 # factor_panel ----
-factor_panel <- 
-  mainPanel( uiOutput("fp_factorVariables"))
+factor_panel <- uiOutput("fp_factorVariables")
 
 # Sidebar ----
 sidebar <- dashboardSidebar(
+  actionButton("refresh", "Refresh"),
   sidebarMenu(
     menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-    menuItem("Load Data", tabName = "generate_panel", icon = icon("cog")),
+    menuItem("Load Data", tabName = "load_data_panel", icon = icon("cog")),
+    menuItem("Load Metadata", tabName = "load_metadata_panel", icon = icon("cog")),
     menuItem("Process Factors", tabName = "factor_panel", icon = icon("cog")),
     menuItem("Analyze", tabName = "analyze_panel", icon = icon("area-chart"))
   ))
 
 
-# combine panel ----
-load_panel <-
-    mainPanel(
-      fluidRow(fileInput('testdataFile', 'RData file')),
+# load data panel ----
+load_data_panel <-
+    fluidRow(
+    column(3, excelFileUI('excel_datafile', 'Data')),
+    column(9, DT::dataTableOutput("mvdataDataTable")))
 
-      fluidRow( 
-        conditionalPanel("!output.testdataFileEnvLoaded",
-           p("Load data and wait for it to load.")),
-
-        conditionalPanel("output.testdataFileEnvLoaded",
-        tabsetPanel(type = "tabs",
-           tabPanel("Data", DT::dataTableOutput("mvdataDataTable")),
-           tabPanel("Metadata", DT::dataTableOutput("metadataDataTable")),
-           tabPanel("Factorized Metadata", 
-                   DT::dataTableOutput("factorizedMetadataDataTable"))))))
+load_metadata_panel <-
+    fluidRow(
+        column(3, excelFileUI('excel_metadatafile', 'Metadata')),
+        column(9, 
+      tabsetPanel(type = "tabs", 
+                  id = "inputDataTabsetPanel",
+          tabPanel("Metadata", DT::dataTableOutput("metadataDataTable")),
+          tabPanel("Discretized", 
+                   DT::dataTableOutput("factorizedMetadataDataTable")))))
 
 # Body ----
 body <- dashboardBody(
@@ -81,7 +82,8 @@ body <- dashboardBody(
   tabItems(
     tabItem(tabName = "dashboard",
             fluidRow(wellPanel( includeMarkdown("overview.md")))),
-    tabItem(tabName = "generate_panel", load_panel ),
+    tabItem(tabName = "load_data_panel", load_data_panel ),
+    tabItem(tabName = "load_metadata_panel", load_metadata_panel ),
     tabItem(tabName = "factor_panel",  factor_panel ),
     tabItem(tabName = "analyze_panel", analyze_panel )
   ))

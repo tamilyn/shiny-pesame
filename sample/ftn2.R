@@ -12,7 +12,7 @@ apply_factorization <- function(d) {
 
 factorize_data <- function(md) {
   if(is.null(md)) {
-    print("Factorize data , NULL")
+    print("Discretize data , NULL")
     return(NULL)
   }
 
