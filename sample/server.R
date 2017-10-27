@@ -2,10 +2,9 @@
 
 library(shiny)
 library(shinydashboard)
+library(shinyjs)
 library(plotly)
 library(dplyr)
-library(rio)
-library(RColorBrewer)
 library(purrr)
 library(futile.logger)
 library(stringr)
@@ -16,18 +15,26 @@ library(openxlsx)
 library(readxl)
 
 source("util.R")
-source("generate.R")
-#source("generate_test_data.R")
-source("ftn2.R")
 source("plotly_bar.R")
+
+flog.appender(appender.file("pesame.log"))
 
 shinyServer(function(input, output, session) {
 
   source('pesame.R', local = TRUE)
   source('helper.R', local = TRUE)
 
-  excel_datafile <- callModule(excelFile, "excel_datafile")
-  excel_metadatafile <- callModule(excelFile, "excel_metadatafile")
+  flog.info("starting")
+
+  rlist <- callModule(excelFile, "importedFile" )
+
+  # load_data ----
+  # show Loading panel until initialized
+  load_data <- function() {
+    shinyjs::hide("loading_page")
+    shinyjs::show("main_content")
+  }
+  load_data()
 
   ###-- BEGIN reactive values ----
   availableFactors <- reactiveVal(list())
@@ -39,50 +46,41 @@ shinyServer(function(input, output, session) {
   mvdata <- reactiveVal(NULL)
 
   orig_metadata <- reactiveVal(NULL)
-  orig_mvdata <- reactiveVal(NULL)
   ###-- END reactive values ----
 
   theSelectedFactor <- reactive({
     req(input$selectedFactor)
 
-    #print(str_c("selected factor: [", input$selectedFactor, "]", sep=""))
+    flog.info(str_c("selected factor: [", input$selectedFactor, "]", sep=""))
 
     fd <- metadata()
-    if(is.null(input$selectedFactor)) {
-       print("NO FACTOR")
-       return(NULL)
-    }
     fd[, input$selectedFactor]
-  })
-
-  get_tft <- reactive({
-
-    print("56: get_tft NOT TRANSPOSING ANYMORE")
-    mdata <- mvdata()
-    if(is.null(mdata)) return(NULL)
-    
-    t_tft <- mdata
-    ##print("62: get_tft")
-
-    rownames(t_tft) <- colnames(mdata)
-    print("65: get_tft")
-    t_tft
-  })
-
-  observeEvent(input$refresh, {
-      print("REFRESH")
-      processDataFileSheet()
-      processTestdataFile()
   })
 
   # baseFilteredData ----
   # filter data by significance threshold and transpose
   baseFilteredData <- reactive({
-    tft <- get_tft()
+    flog.info("97: baseFilteredData")
+    tft <- mvdata()
 
-    # convert data
-    bd = suppressWarnings(helper.data_by_auc( tft,
-          theSelectedFactor(), input$adj_method))
+    flog.info(str_c("100: baseFilteredData: selected Factor:",
+       theSelectedFactor(),
+       "method", input$adj_method, sep = " "))
+
+    sf <- theSelectedFactor()
+    f <- as.matrix(t(sf))
+    flog.info(str_c("sel factor dim", str_c(dim(sf), collapse=" , ")))
+    flog.info(str_c("factor ", str_c(length(f), collapse=" , ")))
+    flog.info(str_c("tft dim", str_c(dim(tft), collapse=" , ")))
+
+    bd = helper.data_by_auc( otut = tft, 
+       f = f, input$adj_method)
+
+    #bd = suppressWarnings(
+    #     helper.data_by_auc( 
+    #      otut = tft, f = f, input$adj_method))
+
+    flog.info("got bd")
 
     ft <- bd
     if(!is.matrix(ft)) {
@@ -94,7 +92,7 @@ shinyServer(function(input, output, session) {
       } 
       ft <- as.matrix(ft)
     }
-      #print("78: after converting to matrix")
+      flog.info("78: after converting to matrix")
 
     sf <- as.numeric(input$signficance_threshold)
     filt = (ft["p.adjust", ] < sf) & !is.na(ft["p.adjust", ])
@@ -110,7 +108,7 @@ shinyServer(function(input, output, session) {
     seq(-tickMarkers, tickMarkers, length.out = 5)
   }
 
-  #####################################################################
+  ###########################################################
   # filteredData ----
   # Apply filter to base data
   # Get data with adjust method applied, then apply p.value filter,
@@ -120,13 +118,12 @@ shinyServer(function(input, output, session) {
     b <- baseFilteredData()
     #print("108: filteredData")
     if(is.null(b)) {
-      print("NO BASE FILTERED DATA")
+      flog.info("130: filteredData: NO BASE FILTERED DATA")
       return(NULL)
     }
-    #print("113: filteredData")
 
     if (nrow(b) == 0) {
-      print("127: no data")
+      flog.info("127: no data")
       return(NULL)
     }
 
@@ -139,22 +136,17 @@ shinyServer(function(input, output, session) {
     dd
   })
 
-
-  mymetadata <- reactive({
-     metadata()
-  })
-  #####################################################################
+  ###########################################################
   # output$metadataTable ----
   output$factorizedMetadataDataTable <- renderDataTable({
-     req(processTestdataFile(), initFactorVariables(), mymetadata())
+     req(metadata())
 
-     action <- dataTableAjax(session, mymetadata())
+     #action <- dataTableAjax(session, metadata())
      print(str_c("factor metadataDataTable DATA metadata()", nrow(metadata())))
-     #data.table(metadata())
-     DT::datatable(mymetadata())
+     DT::datatable(metadata())
   })
 
-  #####################################################################
+  ###########################################################
   output$citation <- renderText({
         a <- citation("ggplot2")
         b <- a[1]
@@ -163,14 +155,14 @@ shinyServer(function(input, output, session) {
 	msg
   })
 
-  #####################################################################
+  ###########################################################
 
   # use plot_ly to display data
   # generatePlot_ly ----
   generatePlot_ly <- function(dd) {
-    print(paste("211: generatePlot_ly"))
+    flog.info(paste("211: generatePlot_ly"))
     if(length(dd) <= 0) {
-      print(paste("126: returning empty plot_ly,no rows"))
+      flog.error(paste("126: returning empty plot_ly,no rows"))
       return(ggplot())
     }
 
@@ -220,10 +212,10 @@ shinyServer(function(input, output, session) {
   # output$filteredPlotly ----
   #     this uses f the factor
   output$filteredPlotly <- renderPlotly({
-    print("FILTERED PLOTLY")
+    flog.info("FILTERED PLOTLY")
     dd <- filteredData()
     if(is.null(dd) || length(dd) == 0) {
-       print("filteredPlotly: NO DATA")
+       flog.info("filteredPlotly: NO DATA")
        return(NULL)
     }
 
@@ -253,13 +245,13 @@ shinyServer(function(input, output, session) {
     } else {
       numDisplayed <- nrow(filteredData())
     }
-    mdata <- mvdata()
-    totalRows <- nrow(mdata)
+
+    totalRows <- nrow(mvdata())
 
     msg <- paste("Displaying ", numDisplayed , " of ", totalRows,
                  " total rows using ", input$adj_method,
                  " significance value ",  input$signficance_threshold)
-    print(msg)
+    flog.info(msg)
     msg
    })
 
@@ -277,27 +269,6 @@ shinyServer(function(input, output, session) {
       h1("No available factors")
     }
   })
-
- # do this once when the data set is initially loaded
- initFactorVariables <- reactive({
-   isolate({
-     print("initFactorVariables")
-     mf = metadata()
-     #print(head(mf,2))
-
-     cnames = colnames(mf)
-     if(length(cnames) >= 1) {
-       details <- new_factor_details(mf) 
-       details <- details %>% 
-         mutate(idnum = 1:nrow(details))
-       factorDetails(details)
-       setDetails(details)
-
-       cd <- computeDisplayDetails()
-       computedDetails(cd)
-     }
-   })
- })
 
  ###
  # create html action buttons for features which need to be split
@@ -319,16 +290,16 @@ shinyServer(function(input, output, session) {
 
     if (lid %like% "median") {
       row_to_split <- as.numeric(gsub("median_","",lid))
-      print(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
+      flog.info(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "median")
       #vals$Data <- vals$Data[-row_to_delete]
     } else if (lid %like% "mean") {
       row_to_split <- as.numeric(gsub("mean_","",lid))
-      print(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
+      flog.info(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "mean")
       #vals$Data <- vals$Data[-row_to_delete]
     } else if (lid %like% "modify") {
-      print("MODIFY")
+      flog.info("MODIFY")
       row_to_modify <- as.numeric(gsub("modify_","",lid))
       #print(str_c("MODIFYING that row", lid, row_to_modify, sep = " "))
       #showModal(modal_modify)
@@ -342,25 +313,22 @@ shinyServer(function(input, output, session) {
   observeEvent(input$lastGroupClick, {
     lid = input$lastGroupClickId
 
-    #print(paste("observeEvent$lastGroupClick", input$lastGroupClickId ))
-    #popup with the name, the method, 
-
-
+    flog.info("lastGroupClick DISABLED FOR NOW until we make the button operate on the right df")
     print("DISABLED FOR NOW until we make the button operate on the right df")
     return(NULL)
 
     if (lid %like% "median") {
       row_to_split <- as.numeric(gsub("median_","",lid))
-      print(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
+      flog.info(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "median")
       #vals$Data <- vals$Data[-row_to_delete]
     } else if (lid %like% "mean") {
       row_to_split <- as.numeric(gsub("mean_","",lid))
-      print(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
+      flog.info(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "mean")
       #vals$Data <- vals$Data[-row_to_delete]
     } else if (lid %like% "modify") {
-      print("MODIFY")
+      flog.info("MODIFY")
       row_to_modify <- as.numeric(gsub("modify_","",lid))
       #print(str_c("MODIFYING that row", lid, row_to_modify, sep = " "))
       #showModal(modal_modify)
@@ -368,10 +336,9 @@ shinyServer(function(input, output, session) {
    })
 
 
-
  
  computeDisplayDetails <- reactive({
-   print("370: COMPUTE DISPLA DETAILS (of factors)")
+   flog.info("370: computeDisplayDetails: (of factors)")
    details <- allOriginalFactor() %>%
      arrange(ready) %>%
      mutate(look = ifelse(ready == FALSE, str_c("<b>",description,"</b>"), 
@@ -382,8 +349,6 @@ shinyServer(function(input, output, session) {
 
  displayDetails <- reactive({
    d <- computedDetails()
-   print("RETURNING display details")
-   head(d)
    d
  })
 
@@ -421,25 +386,17 @@ shinyServer(function(input, output, session) {
  ## output$factorVariables ----
  output$fp_factorVariables <- renderUI({
 
-   print("fp_factorVariables")
+   flog.info("fp_factorVariables")
    orig_md <- orig_metadata()
 
    if(is.null(orig_md) ) {
      return(h1("No factors to show because no meta data loaded"))
    }
 
-   #print("here - data loaded")
-   #print(str(orig_md,1))
-
    details <- displayDetails() 
    return(tagList(
       div(str_c("All variables: ", str_c(details$name, collapse = ", "))),
       tabsetPanel(type="tabs", 
-        #tabPanel("Description",
-        #  purrr::safely( 
-        #    html(describe(orig_md, descript = "Data", 
-        #       exclude.missing = TRUE), scroll = TRUE),
-        #  p("descriptions unavailable"))),
 
         tabPanel("Continuous",
           dataTableOutput("continuousFactorsDataTable")),
@@ -473,47 +430,22 @@ shinyServer(function(input, output, session) {
   ##############################################################
   outputOptions(output, "hasFactorVariables",  suspendWhenHidden = FALSE)
 
-  processDataFileSheet <- reactive({
-      print("DATA updated: processDataFileSheet")
-      df <- excel_datafile() 
-
-      mvdata(df)
-      orig_mvdata(df)
-  })
-
-  processTestdataFile <- reactive({
-      print("METADATA updated: processTestdataFile")
-      df <- excel_metadatafile() 
-
-      # convert any character to factor
-      if(is.data.frame(df)) {
-        df <- df %>% 
-           mutate_if(is.character, as.factor) 
-      }
-
-      metadata(df)
-      orig_metadata(df) 
-      initFactorVariables()
-
-      return(TRUE)
-  })
-
   output$mvdataDataTable <- renderDataTable({
-     processDataFileSheet()
+     req(mvdata())
      DT::datatable(mvdata())
   })
 
 
   # output#metadataUI ----
   output$metadataUI <- renderUI({
-     req(processTestdataFile(), initFactorVariables(), orig_metadata())
+     req(orig_metadata())
 
      h1("metadataUI")
      DT::datatable(orig_metadata())
   })
 
   output$metadataDataTable <- renderDataTable({
-     req(processTestdataFile(), initFactorVariables(), orig_metadata())
+     req(orig_metadata())
      DT::datatable(orig_metadata())
   })
 
@@ -527,17 +459,17 @@ shinyServer(function(input, output, session) {
        af <- rdetails$description
        pf <- pdetails$description
 
-       print(str_c("setDetails: all: ", nrow(details), 
+       flog.info(str_c("setDetails: all: ", nrow(details), 
                 " available: ", nrow(rdetails),
         " need processing: ", nrow(pdetails) ))
-       print(head(details))
+       flog.info(head(details))
 
        allOriginalFactor(details)
        availableFactors(af)
   }
   
   applyFactorButton <- function(ft, tp) {
-    print(str_c("applyFactorButton: ", ft, " tp ", tp))
+    flog.info(str_c("applyFactorButton: ", ft, " tp ", tp))
 
     orig_md <- orig_metadata()
     md <- metadata()
@@ -611,6 +543,46 @@ shinyServer(function(input, output, session) {
        setDetails(details)
      })
    })
+
+  #-- EVENT input$setDataButton ----
+  observeEvent(input$setDataButton, {
+    df <- rlist()$dataframe()
+    flog.info(str_c("SET DATA nrows: ", nrow(df)))
+
+    mvdata(df)
+  })
+
+  #-- EVENT input$setMetadataButton ----
+  observeEvent(input$setMetadataButton, {
+    df <- rlist()$dataframe()
+    flog.info(str_c("SET META DATA nrow: ", nrow(df)))
+
+    # convert any character to factor
+    if(!is.data.frame(df)) {
+      flog.info("setMetadataButton: converting to data frame")
+      df <- as.data.frame(df)
+    }
+
+    if(is.data.frame(df)) {
+      df <- df %>% 
+         mutate_if(is.character, as.factor) 
+    }
+
+    metadata(df)
+    orig_metadata(df) 
+
+    if(ncol(df) >= 1) {
+       details <- new_factor_details(df) 
+       details <- details %>% 
+         mutate(idnum = 1:nrow(details))
+
+       factorDetails(details)
+       setDetails(details)
+
+       cd <- computeDisplayDetails()
+       computedDetails(cd)
+     }
+  })
 
   #-- EVENT input$applySplitButton ----
   observeEvent(input$applySplitButton, {

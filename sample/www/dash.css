@@ -78,3 +78,13 @@
   margin-left: 10px;
   margin-right: 10px;
 }
+
+#main_content {
+  //border: thick solid purple;
+  overflow-x: auto;
+}
+
+table.dataTable {
+  border: thin solid purple;
+  overflow-x: auto;
+} 

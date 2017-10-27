@@ -1,4 +1,5 @@
 library(futile.logger)
+library(stringr)
 
 helper.setpar = function() {
   par(oma = c(1, 4, 1, 2))  # outside margins, bot,l,top,right
@@ -12,14 +13,22 @@ helper.setpar = function() {
 helper.data_by_auc = function(otut, f, method = 'fdr') {
 
   if( nrow(otut) != length(f) ) {
-     print("Factor length must be same as number of rows in the matrix")
+     print(str_c("Factor length (", nrow(f), ") must be same as number of rows (", nrow(otut), ") in the matrix ",
+    length(f) ))
+     flog.error(str_c("Factor length (", nrow(f), ") must be same as number of rows (", nrow(otut), ") in the matrix ",
+     length(f) ))
      return(NULL)
   }
 
+  flog.info("helper, length/nrow check passed")
+
   res = table.wilcox.auc(otut, f)
+  flog.info("26 helper, length/nrow check passed")
   res = rbind(res, 
          p.adjust = p.adjust(res["p.value", ], 
          method = method))
+
+  flog.info("30 helper, length/nrow check passed")
   ordered <- order(res["auc",])
   res <- res[, ordered, drop = FALSE]
 }

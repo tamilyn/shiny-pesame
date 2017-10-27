@@ -16,7 +16,7 @@ wilcox.auc = function(x, f, alpha=0.05){
   # make sure two items are the same length,
   # stop otherwise
   if(length(x) != length(f)) {
-     print("mismatch ")
+     flog.info(str_c("wilcox.auc - mismatch", length(x), length(f), sep = " "))
      return(NULL)
   }
 
@@ -28,7 +28,7 @@ wilcox.auc = function(x, f, alpha=0.05){
   high = auc + qnorm(1-alpha)*se
   p.value = wilcox.test(x~f)$p.value
   ns = tapply(f,f,length)
-  res=rbind(n1=ns[1], n2=ns[2], auc=auc, se=se, low=low, high=high, p.value=p.value)
+  res = rbind(n1 = ns[1], n2 = ns[2], auc = auc, se = se, low = low, high = high, p.value = p.value)
   colnames(res) = ""
   t(res)
 }

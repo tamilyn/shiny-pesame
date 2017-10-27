@@ -1,6 +1,6 @@
 library(RColorBrewer)
 
-source("excelFileModule.R")
+source("fileImporterModule.R")
 
 ## fileFormats ---- 
 fileFormats = c('text/csv',

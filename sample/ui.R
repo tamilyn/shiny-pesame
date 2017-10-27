@@ -1,6 +1,7 @@
 # /Users/tamicrawford/projects/pdash3/sample/ui.R
 library(shiny)
 library(shinydashboard)
+library(shinyjs)
 library(plotly)
 library(markdown)
 library(RColorBrewer)
@@ -48,47 +49,54 @@ factor_panel <- uiOutput("fp_factorVariables")
 
 # Sidebar ----
 sidebar <- dashboardSidebar(
-  actionButton("refresh", "Refresh"),
   sidebarMenu(
-    menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-    menuItem("Load Data", tabName = "load_data_panel", icon = icon("cog")),
-    menuItem("Load Metadata", tabName = "load_metadata_panel", icon = icon("cog")),
+    menuItem("Load Data", tabName = "dashboard", icon = icon("dashboard")),
+    menuItem("View Inputs", tabName = "load_metadata_panel", icon = icon("cog")),
     menuItem("Process Factors", tabName = "factor_panel", icon = icon("cog")),
     menuItem("Analyze", tabName = "analyze_panel", icon = icon("area-chart"))
   ))
 
-
-# load data panel ----
-load_data_panel <-
-    fluidRow(
-    column(3, excelFileUI('excel_datafile', 'Data')),
-    column(9, DT::dataTableOutput("mvdataDataTable")))
-
 load_metadata_panel <-
-    fluidRow(
-        column(3, excelFileUI('excel_metadatafile', 'Metadata')),
-        column(9, 
-      tabsetPanel(type = "tabs", 
-                  id = "inputDataTabsetPanel",
-          tabPanel("Metadata", DT::dataTableOutput("metadataDataTable")),
-          tabPanel("Discretized", 
-                   DT::dataTableOutput("factorizedMetadataDataTable")))))
+   tabsetPanel(type = "tabs", 
+               id = "inputDataTabsetPanel",
+      tabPanel("Data", 
+         DT::dataTableOutput("mvDataTable")),
+      tabPanel("Metadata", 
+         DT::dataTableOutput("metadataDataTable")),
+      tabPanel("Discretized", 
+        DT::dataTableOutput("factorizedMetadataDataTable")))
 
 # Body ----
 body <- dashboardBody(
+
+  useShinyjs(),
+
   tags$head(
     tags$title('PESAME Dashboard'),
     tags$link(rel = 'stylesheet', type = 'text/css', href = 'dash.css')),
-  tabItems(
+
+  div(id = "loading_page", h1("Loading...")),
+
+  hidden(div(id = "main_content",
+   tabItems( 
     tabItem(tabName = "dashboard",
-            fluidRow(wellPanel( includeMarkdown("overview.md")))),
-    tabItem(tabName = "load_data_panel", load_data_panel ),
+      tagList(
+      wellPanel( includeMarkdown("overview.md")),
+      sidebarLayout(
+        sidebarPanel(
+          importFileUI('importedFile'), 
+          actionButton("setDataButton", "Set Data"),
+          actionButton("setMetadataButton", "Set Metadata")),
+        mainPanel(
+          importDisplayFileUI('importedFile'))))), 
+
+    #tabItem(tabName = "load_data_panel", load_data_panel ),
     tabItem(tabName = "load_metadata_panel", load_metadata_panel ),
     tabItem(tabName = "factor_panel",  factor_panel ),
     tabItem(tabName = "analyze_panel", analyze_panel )
-  ))
+  ))))
 
-# Dashboard ----------------------------------------------------------
+# Dashboard ----
 dashboardPage(
   header,
   sidebar,
