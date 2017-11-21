@@ -1,0 +1,107 @@
+
+body { padding-top: 140px; }
+
+.value {
+  font-size: 14pt; color: #660099; 
+  font-weight: 700;
+  line-height: 1.1em;
+}
+
+.content {
+  overflow-y: auto;
+  overflow-x: auto;
+  height: 80%;
+  border: thick solid red;
+  max-height: 600px;
+}
+
+#fp_factorVariables tabbable {
+   border: thick solid orange;
+}
+
+#fp_factorVariables {
+   border: thin solid #eee;
+   padding: 10px;
+   background-color: white;
+}
+
+#fp_factorVariables .nav .nav-tabs {
+   background-color: #eee;
+}
+
+//.nav .nav-tabs li.active {
+//   background-color: wheat;
+//}
+
+ 
+#fp_factorVariables tabbable li {
+   border: thick solid green;
+}
+
+#inputDataUI { 
+  backbground-color: white;
+  border: thick solid red;
+}
+
+#inputDataUI .row { 
+  margin: 5px;
+  border: thin solid black;
+}
+
+
+.excelmodule {
+  border: thin solid blue;
+  background-color: #ccccff;
+}
+
+.excelModuleUI {
+  background-color: white;
+  border-radius: 15px 15px 15px 15px; 
+  -moz-border-radius: 17px 15px 15px 15px; 
+  -webkit-border-radius: 15px 15px 15px 15px; 
+  border: 1px solid black; 
+  padding: 10px;
+  margin: 10px;
+}
+
+.excelModuleUI .row {
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+#main_content {
+  //border: thick solid purple;
+  overflow-x: auto;
+}
+
+table.dataTable {
+  border: thin solid silver;
+  overflow-x: auto;
+  overflow-y: auto;
+} 
+
+#fp_status {
+  border: thin solid blue;
+}
+
+
+#statusPanel {
+  background-color: #ccccff;
+  border: thick solid red;
+}
+
+
+//table.dataTable tbody tr.even td { color: black; }
+//table.dataTable tbody tr.odd td { color: blue; }
+
+#sections #sections-main {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.tabbable {
+  overflow-x: auto;
+  overflow-y: auto;
+}

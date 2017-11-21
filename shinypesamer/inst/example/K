@@ -1,0 +1,4 @@
+
+  nmd <- apply(md,2,as.numeric)
+  fnmd <- apply(nmd,2,is.numeric)
+
