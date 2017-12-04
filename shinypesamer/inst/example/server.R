@@ -99,9 +99,7 @@ shinyServer(function(input, output, session) {
     }
 
     flog.info(str_c("64: baseFilteredData: selected Factor:",
-       length(sf), "method", input$adj_method, 
-       #"tft dim", str_c(dim(tft), collapse=" , "), 
-       sep = " "))
+       length(sf), "method", input$adj_method, sep = " "))
 
     otut <- otut_for_processing()
     flog.info(str_c("72: baseFilteredData", 
@@ -176,7 +174,7 @@ shinyServer(function(input, output, session) {
      req(filteredData())
 
      flog.info(str_c("filteredData ", nrow(filteredData())))
-     DT::datatable(t(filteredData()))
+     DT::datatable(filteredData())
   })
 
   ###########################################################

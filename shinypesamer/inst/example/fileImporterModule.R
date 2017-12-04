@@ -32,18 +32,10 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     }
 
     ext <- tools::file_ext(file$name)
-    print(str_c("SETTING FILENAME TO ", file$name))
+    #print(str_c("SETTING FILENAME TO ", file$name))
     fileVal(file$name)
     flog.info(str_c("userFile:", ext, file$name, sep = " "))
-    print(str_c("35: userFile:", ext, file$name, sep = " "))
-
-    # not sure if needed for openxlsx, but just in case
-    # don't use input$file anywhere else, always use userFile
-    #newFileName <- paste(file$datapath, ext, sep=".")
-    #file.rename(file$datapath,newFileName)
-    #flog.info(paste("43: infile:", file$name, "new ", newFileName))
-    #print(paste("43: infile:", file$name, "new ", newFileName))
-
+    #print(str_c("35: userFile:", ext, file$name, sep = " "))
     file
   })
 
@@ -57,7 +49,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
   startCol <- reactive({ input[[ "startCol" ]] })
   endCol <- reactive({ input[[ "endCol" ]] })
 
-  transpose <- reactive({ input[[ "transpose" ]] })
+  samplesAreRows <- reactive({ input[[ "samplesAreRows" ]] })
   selectedSheet <- reactive({ input[[ "selectedSheet" ]] })
   file <- reactive({input[[ "file" ]] })
 
@@ -136,7 +128,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
              sheets, multiple = FALSE),
 
       if( !is.null(sheets))  
-           checkboxInput(ns("transpose"), "Samples are rows", value = FALSE),
+           checkboxInput(ns("samplesAreRows"), "Samples are rows", value = TRUE),
       
       if( !is.null(sheets))  
       fluidRow(
@@ -153,9 +145,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
       column(6,
        numericInput(ns("endCol"), "EndColumn:", 1, min = 1, max = 1000)))
      )
-
-
-
   })
 
   rawDataForSheet <- reactive({
@@ -277,9 +266,9 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     d <- rawDataForSheet()
 
     # these options only available once a file has been loaded
-    if("transpose" %in% names(input)) {
-      trans <- input$transpose
-      if(trans == TRUE) {
+    if("samplesAreRows" %in% names(input)) {
+      trans <- input$samplesAreRows
+      if(trans != TRUE) {
         d <- t(d)
       }
       d <- tryCatch({
@@ -292,7 +281,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
          d
      })
     }
-    return(list(dataframe_data = d, startRow = startRow, startCol = startCol, transpose = trans))
+    return(list(dataframe_data = d, startRow = startRow, startCol = startCol, samplesAreRows = trans))
   })
 
   availableSheets <- reactive({
@@ -345,7 +334,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
   optionsForExtension <- function(ext) {
     if(ext == "xlsx") {
        str_c("Sheet", input$selectedSheet, 
-              "Transpose", input$transpose,
+              "Samples Are Rows", input$samplesAreRows,
               "Start Row", input$startRow,
               "Start Col", input$startCol,
               sep = " "

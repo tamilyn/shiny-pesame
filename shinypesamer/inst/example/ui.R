@@ -47,7 +47,7 @@ modal_equation <-
   bs_modal(
     id = "modal_equation",
     title = "Equations",
-    body = "<h1>HELLO TAMI</h1>", #includeMarkdown(system.file("markdown", "modal.md", package = "bsplus")),
+    body = "<h1>HELLO TAMI</h1>", 
     size = "medium"
 )
 
@@ -62,12 +62,10 @@ shinyUI(fluidPage(
   useShinyjs(),
   modal_equation,
 
-
   tags$head(
     tags$title('PESAME'),
     tags$link(rel = 'stylesheet', type = 'text/css', href = 'styles.css')),
 
-  #titlePanel("PESAME"),
   top_part,
 
   div(
