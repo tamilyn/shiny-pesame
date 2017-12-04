@@ -20,11 +20,9 @@ helper.data_by_auc = function(otut, fdata, method = 'fdr') {
     return(NULL)
   }
   
-  flog.info("21: helper, dimension check passed")
-  flog.info(str_c("22: helper, length(fdata)", length(fdata)))
-
-  flog.info(str_c("22: helper, length(fdata)", 
+  flog.info(str_c("22: helper, length(fdata)", length(fdata),
        str_c(dim(otut), collapse=", ")))
+
   res = table.wilcox.auc(otut, fdata)
   res = rbind(res, 
          p.adjust = p.adjust(res["p.value", ], 

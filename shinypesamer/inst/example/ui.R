@@ -24,7 +24,8 @@ top_part <- tags$nav(class="navbar navbar-default navbar-fixed-top",
 load_data_content_side <-
    div("Select data and meta data source",
       hidden(actionButton(class="btn-block", "setDataButton", "Set Data")),
-      hidden(actionButton(class="btn-block", "setMetadataButton", "Set Metadata")))
+      hidden(actionButton(class="btn-block", "setMetadataButton", "Set Metadata")),
+      hidden(actionButton(class="btn-block", "resetButton", "Reset")))
 
 load_data_content_main <-
   tagList(

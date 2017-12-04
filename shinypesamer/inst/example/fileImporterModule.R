@@ -28,7 +28,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
 
     file <- input$file 
     if(is.null(file)) {
-       print("28: userFile() NO FILE")
        return(NULL)
     }
 

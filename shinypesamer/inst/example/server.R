@@ -79,17 +79,18 @@ shinyServer(function(input, output, session) {
     fdata
   })
 
+  otut_for_processing <- reactive({
+    tft <- mvdata()
+    if(is.null(tft)) {
+      return(NULL)
+    }
+    return(as.matrix(tft))
+  })
+
   # baseFilteredData ----
   # filter data by significance threshold and transpose
   baseFilteredData <- reactive({
     req(input$signficance_threshold)
-
-    tft <- mvdata()
-
-    if(is.null(tft)) {
-      flog.info("85: baseFilteredData: no data")
-      return(NULL)
-    }
 
     sf <- theSelectedFactor()
     if(length(sf) == 0) {
@@ -99,10 +100,10 @@ shinyServer(function(input, output, session) {
 
     flog.info(str_c("64: baseFilteredData: selected Factor:",
        length(sf), "method", input$adj_method, 
-       "tft dim", str_c(dim(tft), collapse=" , "), 
+       #"tft dim", str_c(dim(tft), collapse=" , "), 
        sep = " "))
 
-    otut <- as.matrix(tft)
+    otut <- otut_for_processing()
     flog.info(str_c("72: baseFilteredData", 
        "otut dim", str_c(dim(otut), collapse=" , "), 
        sep =  " "))
@@ -119,6 +120,7 @@ shinyServer(function(input, output, session) {
         })
 
     if(is.null(ft)) {
+      # need to display an error message
       flog.info("118: baseFilteredData NULL")
       return(NULL)
     }
@@ -272,6 +274,18 @@ shinyServer(function(input, output, session) {
   })
 
 
+
+  check_data_dims <- reactive({
+    otut <- otut_for_processing()
+    fdata <- theSelectedFactor()
+    if( nrow(otut) != length(fdata) ) {
+      msg = str_c("Factor length (", length(fdata), 
+        ") must be same as number of rows (", nrow(otut), ")" )
+      return(msg)
+    } 
+    return(NULL)
+  })
+
   statusMessage <- reactive({
     d <- mvdata()
     if(is.null(d)) {
@@ -283,7 +297,12 @@ shinyServer(function(input, output, session) {
     fd <- baseFilteredData()
     if(is.null(fd)) {
       numDisplayed <- 0
+      m <- check_data_dims()
+      if(is.null(m)) {
       return("No data (after apply significance threshold)")
+      } else {
+        return(m)
+      }
     } else {
       numDisplayed <- nrow(fd)
     }
@@ -593,6 +612,24 @@ shinyServer(function(input, output, session) {
     mvdata(df)
   })
 
+  #-- EVENT input$resetButton ----
+  observeEvent(input$resetButton, {
+
+    flog.info("reset")
+
+    mvdata(NULL)
+    metadata(NULL)
+    orig_metadata(NULL) 
+    
+    availableFactors(list())
+    allOriginalFactor(list())
+    factorDetails(list())
+    computedDetails(list())
+
+    mainData(list())
+    metaData(list())
+  })
+
   #-- EVENT input$setMetadataButton ----
   observeEvent(input$setMetadataButton, {
     df <- rlist()$dataframe()
@@ -621,13 +658,11 @@ shinyServer(function(input, output, session) {
       df <- xdf
     }
 
+    flog.info("setting metadata() and orig_metadata()")
     # save original converted to numeric
     metadata(df)
     orig_metadata(df) 
     
-    flog.info("setting metadata() and orig_metadata()")
-    flog.info("clearing factor info")
-
     availableFactors(list())
     allOriginalFactor(list())
     factorDetails(list())
@@ -686,9 +721,11 @@ shinyServer(function(input, output, session) {
     if(is.null(rlist())) {
       shinyjs::hide("setDataButton")
       shinyjs::hide("setMetadataButton")
+      shinyjs::hide("resetButton")
     } else  {
       shinyjs::show("setDataButton")
       shinyjs::show("setMetadataButton")
+      shinyjs::show("resetButton")
     }
 
     if(length(availableFactors()) > 0) { 
