@@ -11,13 +11,12 @@ shinyServer(function(input, output, session) {
   source("helper.R")
   source("pesame.R")
 
-  # finished loading
-  fi <- reactiveVal(NULL)
-  fileOptions <- reactiveVal(list())
   mainData <- reactiveVal(list())
   metaData <- reactiveVal(list())
 
-  flog.info("starting server")
+  fi <- reactiveVal(NULL)
+  fileOptions <- reactiveVal(list())
+
   rlist <- callModule(fileImporterFile, "inputFile", fi, fileOptions )
 
   # load_data ----
@@ -25,8 +24,6 @@ shinyServer(function(input, output, session) {
   load_data <- function() {
     shinyjs::hide("loading_page")
     shinyjs::show("main_content")
-
-    flog.info("finished loading data")
   }
 
   load_data()
@@ -35,7 +32,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$setDataButton, {
     r <- rlist()
     if(is.null(rlist())) {
-      print("no data loaded")
       return(NULL)
     }
 
@@ -635,7 +631,7 @@ shinyServer(function(input, output, session) {
 
     metaData(fileOptions())
 
-    ######### NEED TO SET THE FACTORS WHEN THE METADATA IS CHANGED
+    ######### NEED TO SET FACTORS WHEN METADATA CHANGED
 
     # convert any character to factor
     if(!is.data.frame(df)) {
@@ -647,6 +643,9 @@ shinyServer(function(input, output, session) {
       df <- df %>% 
          mutate_if(is.character, as.factor) 
     }
+
+    print("setMetaDataButton DIM")
+    print(dim(df))
 
     nmd <- suppressWarnings(apply(df,2,as.numeric))
     zz <- apply(nmd,2,is.numeric) 

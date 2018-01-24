@@ -105,3 +105,24 @@ table.dataTable {
   overflow-x: auto;
   overflow-y: auto;
 }
+
+#describeDataFiles, #describeMetaDataFiles, #describeFactors {
+  background-color: silver;
+  color: black;
+  font-size: 1.5em;
+}
+
+#inputFile-error, .error, #statusMessage {
+  font-size: 1.5em;
+  color: red;
+  background-color: pink;
+
+}
+
+
+#statusMessage {
+  font-size: 1.1em;
+  color: blue;
+  background-color: white;
+}
+

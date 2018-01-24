@@ -11,14 +11,11 @@ top_part <- tags$nav(class="navbar navbar-default navbar-fixed-top",
       tags$li(class="navbar-text navbar-brand", "PESAME"),
       tags$li(class="navbar-text", "Data", tags$br(),
                 tags$b(textOutput("describeDataFiles"))),
-
       tags$li(class="navbar-text", "Metadata", tags$br(),
                 tags$b(textOutput("describeMetaDataFiles"))),
       tags$li(class="navbar-text", "Factors",
-		tags$br(), tags$b(textOutput("describeFactors"))),
-      tags$li(class="navbar-text navbar-right",
-           tags$b(textOutput("statusMessage")) ))
-     ))
+		       tags$br(), tags$b(textOutput("describeFactors"))),
+      tags$li(class="navbar-text", tags$b(textOutput("statusMessage"))))))
 
 
 load_data_content_side <-
@@ -27,16 +24,18 @@ load_data_content_side <-
       hidden(actionButton(class="btn-block", "setMetadataButton", "Set Metadata")),
       hidden(actionButton(class="btn-block", "resetButton", "Reset")))
 
+citation_side <-
+   div("")
+
+citation_main <-
+  div(textOutput("citation"))
+
 load_data_content_main <-
   tagList(
 
    div(id = "loading_page", h1("Loading...")),
-
    hidden(
-    div(id = "main_content",
-      sidebarLayout(
-        sidebarPanel(importFileUI('inputFile')),
-        mainPanel(importDisplayFileUI('inputFile'))))))
+    div(id = "main_content", importFileUI('inputFile'))))
 
 
 
@@ -69,7 +68,9 @@ shinyUI(fluidPage(
   top_part,
 
   div(
-    bs_accordion_sidebar(id = "sections") %>%
+    bs_accordion_sidebar(id = "sections", 
+                         spec_side = c(width = 2, offset = 0),
+                         spec_main = c(width = 10, offset = 0)) %>%
       bs_append( title_side = "Load data",
                  content_side = load_data_content_side,
                  content_main = load_data_content_main) %>%
@@ -78,7 +79,10 @@ shinyUI(fluidPage(
                  content_main = factor_panel ) %>%
       bs_append( title_side = "Analyze",
                  content_side = "View graphs",
-                 content_main = analyze_panel),
+                 content_main = analyze_panel) %>%
+      bs_append( title_side = "Citation",
+                 content_side = citation_side,
+                 content_main = citation_main),
 
     use_bs_tooltip(),
     use_bs_popover(),
