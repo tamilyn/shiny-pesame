@@ -399,28 +399,23 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
        excel_options = list("availableSheets" = availableSheets,
                "selectedSheet" = selectedSheet)
 
-       # how about adding start row, start col
        dx <- list("dataframe" = dataframe, 
                  "filename" = fileVal(),
-  "startRow" = startRow,
-  "endRow" = endRow,
-  "samplesAreRows" = samplesAreRows,
+                 "startRow" = startRow,
+                 "endRow" = endRow,
+                 "samplesAreRows" = samplesAreRows,
                  "description" = description)
        d <- append(dx, excel_options)
        fileOptions(d)
     } else {
       d <- list("dataframe" = dataframe, 
                 "filename" = fileVal(),
-  "startRow" = startRow,
-  "endRow" = endRow,
-  "samplesAreRows" = samplesAreRows,
+                "startRow" = startRow,
+                "endRow" = endRow,
+                "samplesAreRows" = samplesAreRows,
                 "description" = description)
-       flog.info(str_c("459: SETTING FILE OPTIONS ",
-                       str_c(names(d), collapse=", ")))
        fileOptions(d)
     }
-    flog.info(str_c("464: returning FILE OPTIONS ",
-                       str_c(names(d), collapse=", ")))
     d
   })
   return(datalist)

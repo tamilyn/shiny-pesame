@@ -574,7 +574,7 @@ shinyServer(function(input, output, session) {
     orig <- allOriginalFactor()
 
     this_row <- orig[ft, ]
-    this_row$methodapplied = str_c("applied ", tp) 
+    this_row$method_applied = str_c("applied ", tp) 
     this_row$ready = TRUE
     orig[ft, ] <- this_row
 
@@ -586,7 +586,7 @@ shinyServer(function(input, output, session) {
     details[ ft, "ready" ] <- TRUE
 
     cd[ ft, "ready" ] <- TRUE
-    cd[ ft, "methodapplied" ] <- tp
+    cd[ ft, "method_applied" ] <- tp
     cd[ ft, "description" ] <-
         str_c("0 = below or at ", tp, "<br/>",
         "1 = above (", mp,")",sep = "")
