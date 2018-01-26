@@ -2,7 +2,6 @@ library(readxl)
 library(dplyr) 
 library(stringr) 
 library(readr) 
-library(tidyr)
 library(DT)
 
 # module UI ----
@@ -69,37 +68,33 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     file <- userFile()
     ext <- extension()
 
-    if( !is.null(userFile()) ) {
-      if(ext == "csv") {
-        return (tagList( 
-          checkboxInput(ns("row_names"), "Use row names"),
-          checkboxInput(ns("col_names"), "Use column names"),
-          checkboxInput(ns("samplesAreRows"), 
-                        "Samples are rows", value = TRUE)))
+    if(ext == "csv") {
+      return (tagList( 
+        checkboxInput(ns("row_names"), "Use row names"),
+        checkboxInput(ns("col_names"), "Use column names"),
+        checkboxInput(ns("samplesAreRows"), 
+                      "Samples are rows", value = TRUE)))
 
-      }
-
-      #print(str_c("controls FILE NAME ", userFile()$name))
-
-      sheets <- availableSheets()
-      tagList(
-        if( !is.null(sheets))  
-          tagList(
-            checkboxInput(ns("col_names"), "Use column names"),
-            checkboxInput(ns("row_names"), "Use row names"),
-            selectInput(ns("selectedSheet"), "Select Sheet",
-               sheets, multiple = FALSE),
-            checkboxInput(ns("samplesAreRows"), "Samples are rows", value = TRUE),
-            fluidRow( column(6,
-              numericInput(ns("startRow"), "Start Row:", 1, min = 1, max = 9900)),
-              column(6,
-              numericInput(ns("startCol"), "Start Column:", 1, min = 1, max = 1000))),
-
-            fluidRow( column(6,
-              numericInput(ns("endRow"), "End Row:", 1, min = 1, max = 9900)),
-              column(6,
-              numericInput(ns("endCol"), "EndColumn:", 1, min = 1, max = 1000)))))
     }
+
+    sheets <- availableSheets()
+    tagList(
+      if( !is.null(sheets))  
+        tagList(
+          selectInput(ns("selectedSheet"), "Select Sheet",
+             sheets, multiple = FALSE),
+          checkboxInput(ns("col_names"), "Use column names"),
+          checkboxInput(ns("row_names"), "Use row names"),
+          checkboxInput(ns("samplesAreRows"), "Samples are rows", value = TRUE),
+          fluidRow( column(6,
+            numericInput(ns("startRow"), "Start Row:", 1, min = 1, max = 9900)),
+            column(6,
+            numericInput(ns("startCol"), "Start Column:", 1, min = 1, max = 1000))),
+
+          fluidRow( column(6,
+            numericInput(ns("endRow"), "End Row:", 1, min = 1, max = 9900)),
+            column(6,
+            numericInput(ns("endCol"), "EndColumn:", 1, min = 1, max = 1000)))))
   })
 
   readCsvData <- function() {
@@ -121,7 +116,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
          rnames <- unlist(d[, 1])
          has_na <- sum(is.na(rnames))
          df <- d %>% dplyr::select(-1)
-         #df <- data.frame(d[ , 2:ncol(d)])
 
          if (has_na == 0 && length(unique(rnames))  == length(rnames)) {
            flog.info(str_c("using row names, they are unique"))
@@ -130,8 +124,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
          } else {
            flog.error(str_c("176 can't use row names, is.na and/or not unique"))
            v$err = "Warning: Can't use row names, not unique"
-           #warning("can't use row names, not unique")
-           #d
          }
       }
       if("samplesAreRows" %in% names(input)) {
@@ -141,15 +133,10 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
       }
       # if samples are rows, then transpose
       if(trans) {
-         d1 <- t(d)
-         flog.info(str_c("===>  185: readCsvData transposed ", class(d),
-                         " ", class(d1) ))
-         d <- tbl_df(d1)
+         d <- tbl_df(t(d))
+      }
       }
       return(d)
-      } else {
-      return(d)
-      }
   }
 
   rawDataForSheet <- reactive({
@@ -173,10 +160,10 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
 
        if(is.null(sheet)) {
          d <- readxl::read_excel(userFile()$datapath, 
-               col_names = col_names) # input$col_names) 
+               col_names = col_names) 
        } else { 
          d <- readxl::read_excel(userFile()$datapath,
-           sheet = sheet, col_names = col_names ) # input$col_names) 
+           sheet = sheet, col_names = col_names ) 
        }
 
          if(row_names) {
@@ -231,10 +218,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
       return(d)
 
 
-    } else if(ext == "rdata") {
-      d <- data_frame(A=1:4)
-    } else if(ext == "RData") {
-      d <- data_frame(BB=1:4)
     } else {
       d <- data_frame(NODATA=1:4)
     }
@@ -331,26 +314,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     v$data
   })
 
-  xdataframe <- reactive({
-    ext <- extension()
-    if(is.null(ext)) return(NULL)
-
-    if(extension() == "xlsx") {
-      dlist <- dataForExcel()
-      return(dlist[["dataframe_data"]])
-    } else if(extension() == "csv") {
-      d <- readCsvData()
-      print(str_c("380 dataframe() readcsvdata ", 
-                  str_c(dim(d), collapse=" "), 
-                  str_c(class(d), collapse=", ")))
-      flog.info(str_c("380 dataframe() readcsvdata ", 
-                      str_c(class(d), collapse=", ")))
-      return(d)
-    } else {
-      print("data frame NOT XLSX or csv")
-      return(NULL) }
-  })
-
   # We can run observers in here if we want to
   observe({
     msg <- sprintf("File %s was uploaded", userFile()$name)
@@ -400,21 +363,8 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
   }
 
   description <- reactive({
-    validate( need(!is.null(fileVal()), 
-                   "validate description: No data loaded"))
-
-    if(!is.null(fileVal())) {
-      return(str_c("File loaded: ", fileVal()))
-    }
-
-    if(is.null(userFile()$file)){
-      return("No file loaded")
-    }
-
-    req(userFile())
-    ext <- extension()
-    oext <- optionsForExtension(ext)
-    str_c("File", userFile()$name, "Type", extension(), oext, sep = " " )
+    validate( need(fileVal(), "validate description: No data loaded"))
+    return(str_c("File loaded: ", fileVal()))
   })
 
   output$error <- renderText({
@@ -426,7 +376,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
   })
 
   output$filename <- reactive({
-    req(userFile())
+    validate( need(userFile(), "validate description: No filename"))
     str_c("File", userFile()$name, "Type", extension(),
        "Sheet", input$selectedSheet, sep = " " )
   })
@@ -447,17 +397,23 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
 
     if(ext == "xlsx") {
        excel_options = list("availableSheets" = availableSheets,
-               selectedSheet = selectedSheet())
+               "selectedSheet" = selectedSheet)
 
        # how about adding start row, start col
        dx <- list("dataframe" = dataframe, 
                  "filename" = fileVal(),
+  "startRow" = startRow,
+  "endRow" = endRow,
+  "samplesAreRows" = samplesAreRows,
                  "description" = description)
        d <- append(dx, excel_options)
        fileOptions(d)
     } else {
       d <- list("dataframe" = dataframe, 
                 "filename" = fileVal(),
+  "startRow" = startRow,
+  "endRow" = endRow,
+  "samplesAreRows" = samplesAreRows,
                 "description" = description)
        flog.info(str_c("459: SETTING FILE OPTIONS ",
                        str_c(names(d), collapse=", ")))

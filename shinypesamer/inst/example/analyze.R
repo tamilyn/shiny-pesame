@@ -17,9 +17,6 @@ analyze_panel <- tagList(
 
     tabsetPanel(type="tabs",
       tabPanel("Plot", plotlyOutput("filteredPlotly")),
-      tabPanel("Data", dataTableOutput("computedDataTable")) #,
-  #    tabPanel( "Citation", tags$div(
-  #      h1("Citation Information"),
-  #       pre( textOutput("citation") )))
+      tabPanel("Data", dataTableOutput("computedDataTable")) 
     ))))
 

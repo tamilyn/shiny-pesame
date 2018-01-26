@@ -1,5 +1,4 @@
-# /Users/tamicrawford/projects/bstest/example
-#
+
 library(shiny)
 library(bsplus)
 
@@ -46,7 +45,7 @@ modal_equation <-
   bs_modal(
     id = "modal_equation",
     title = "Equations",
-    body = "<h1>HELLO TAMI</h1>", 
+    body = "<h1>HELLO TAMI</h1>",
     size = "medium"
 )
 
@@ -68,7 +67,7 @@ shinyUI(fluidPage(
   top_part,
 
   div(
-    bs_accordion_sidebar(id = "sections", 
+    bs_accordion_sidebar(id = "sections",
                          spec_side = c(width = 2, offset = 0),
                          spec_main = c(width = 10, offset = 0)) %>%
       bs_append( title_side = "Load data",

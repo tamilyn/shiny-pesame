@@ -6,9 +6,9 @@ check.packages <- function(pkg){
 	    print(paste("Installing ", new.pkg))
 	    tryCatch(
               install.packages(new.pkg, dependencies = TRUE),
-              warning = function(e) { 
+              warning = function(e) {
 			print(paste("WARNING INSTALLLING ", new.pkg))},
-               error = function(e) { 
+               error = function(e) {
 		       print(paste("ERROR INSTALLLING ", new.pkg))})
     sapply(pkg, require, character.only = TRUE)
 }
@@ -17,8 +17,10 @@ check.packages <- function(pkg){
 #would like to read the list of packages from a file
 #packages<-c("ggplot2", "Hmisc", "dplyr")
 
-packages <- c("packrat", 
+packages <- c("devtools",
+              "packrat",
               "DT",
+              "lubridate",
 "Hmisc",
 "RColorBrewer",
 "colorspace",
@@ -35,7 +37,9 @@ packages <- c("packrat",
 "shinydashboard",
 "shinyjs",
 "devtools",
-"stringr")
+"stringr",
+"lubridate")
 check.packages(packages)
+
 
 devtools::install_github("tamilyn/bsplus")

@@ -46,10 +46,11 @@ method.options.all = list("holm" = "holm",
      "fdr" = "fdr",
      "none" = "none")
 
-method.options = list( "bonferroni" = "bonferroni","fdr" = "fdr")
+method.options = list( "bonferroni" = "bonferroni",
+                      "fdr" = "fdr",
+                      "none" = "none")
 
 method.options.default = "fdr"
-
 
 #----
 input.options = list( "Excel" = "excel", 
