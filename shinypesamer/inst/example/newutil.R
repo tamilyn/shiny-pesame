@@ -1,6 +1,6 @@
 library(dplyr)
 library(stringr)
-
+library(purrr)
 #
 identify_factors <- function(df) {
 
