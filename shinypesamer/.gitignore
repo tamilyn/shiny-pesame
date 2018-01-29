@@ -3,5 +3,3 @@
 .RData
 .Ruserdata
 *.log
-#packrat/lib*/
-packrat/lib*/
