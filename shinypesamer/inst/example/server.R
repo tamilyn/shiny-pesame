@@ -36,9 +36,6 @@ shinyServer(function(input, output, session) {
     }
 
     df <- rlist()$dataframe()
-    flog.info(str_c("set data: ", str_c(names(fileOptions()), collapse = ", ")))
-    flog.info(str_c("SET DATA nrows: ", nrow(df)))
-
     mainData(fileOptions())
     mvdata(df)
   })
@@ -70,8 +67,13 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
 
+    # probably a call for pull
+    # other <- fd %>% pull(input$selectedFactor)
+    # other does not have names, otherswise the values look the same
+    # not sure those names are needed
     fdata <- fd[, input$selectedFactor]
     fdata <- unlist(fdata)
+    #browser()
     fdata
   })
 
@@ -94,13 +96,9 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
 
-    flog.info(str_c("64: baseFilteredData: selected Factor:",
-       length(sf), "method", input$adj_method, sep = " "))
-
     otut <- otut_for_processing()
     flog.info(str_c("72: baseFilteredData",
-       "otut dim", str_c(dim(otut), collapse=" , "),
-       sep =  " "))
+       "otut dim", str_c(dim(otut), collapse=" , "), sep =  " "))
 
     ft = tryCatch({
         suppressWarnings(helper.data_by_auc( otut = otut, fdata = sf, input$adj_method))
@@ -167,7 +165,6 @@ shinyServer(function(input, output, session) {
   ###########################################################
   # output$metadataTable ----
   output$computedDataTable <- renderDataTable({
-     req(filteredData())
      DT::datatable(filteredData())
   })
 
@@ -176,7 +173,6 @@ shinyServer(function(input, output, session) {
   output$factorizedMetadataDataTable <- renderDataTable({
      req(metadata())
 
-     #action <- dataTableAjax(session, metadata())
      DT::datatable(metadata())
   })
 
@@ -290,7 +286,7 @@ shinyServer(function(input, output, session) {
       numDisplayed <- 0
       m <- check_data_dims()
       if(is.null(m)) {
-      return("No data (after apply significance threshold)")
+        return("No data (after apply significance threshold)")
       } else {
         return(m)
       }
@@ -298,21 +294,12 @@ shinyServer(function(input, output, session) {
       numDisplayed <- nrow(fd)
     }
 
-    cd <- computedDetails()
-    flog.info(str_c("status message cd:", nrow(cd)))
-
     totalRows <- nrow(mvdata())
     msg <- paste("Displaying ", numDisplayed , " of ", totalRows,
                  " total rows using ", input$adj_method,
-                 " significance value ",  input$signficance_threshold,
-              " cols ", nrow(cd))
+                 " significance value ",  input$signficance_threshold)
     flog.info(msg)
     msg
-  })
-
-  output$hasFactorVariables = reactive({
-    af <- availableFactors()
-    return(length(af) > 0)
   })
 
   ## output$factorVariables ----
@@ -335,85 +322,127 @@ shinyServer(function(input, output, session) {
  }
 
 
+ ### categoricalSplitButtons 
+ ### on Assign, should popup a window 
  categoricalSplitButtons <- function(idnum) {
   paste0('<div class="btn-group" role="group" aria-label="Basic example">
-   <button type="button" class="btn btn-primary xbtn-secondary modify"id=categorical_',idnum,'>Assign</button>
+   <button type="button" class="btn btn-primary xbtn-secondary modify"id=group_',idnum,'>Group</button>
    </div>')
  }
 
+ categoricalSplitButtonsAssign <- function(idnum) {
+  paste0('<div class="btn-group" role="group" aria-label="Basic example">
+   <button type="button" class="btn btn-primary xbtn-secondary modify"id=assign_',idnum,'>Assign</button>
+   </div>')
+ }
 
- ##
- # observeEvent input$lastClick ----
+  output$row_assign <- DT::renderDataTable({
+    selected_row = as.numeric(gsub("assign_","",input$lastClickId))
+    flog.info(str_c("row assign SELECTED: ", selected_row))
+    
+    details <- computedDetails() %>% dplyr::filter(idnum == selected_row)
+    uv <- details %>% pull(unique_values) %>% str_split(",") %>% unlist
+    df <- data_frame(variable=uv,label=uv)
+
+    datatable(df, options = list(pageLength = 25),
+     caption = "Assign Labels", escape = FALSE)
+
+#    old_row=vals$Data[selected_row]
+#    row_change=list()
+#    for (i in colnames(old_row)) {
+#      if (is.numeric(vals$Data[[i]])) {
+#          row_change[[i]]<-paste0('<input class="new_input" type="number" id=new_',i,'><br>')
+#      } else
+#        row_change[[i]]<-paste0('<input class="new_input" type="text" id=new_',i,'><br>')
+#      }
+#    row_change = as.data.table(row_change)
+#    setnames(row_change,colnames(old_row))
+#    DT = rbind(old_row,row_change)
+#    rownames(DT) <- c("Current values","New values")
+#    DT
+#    },escape=F,options=list(dom='t',ordering=F),selection="none"
+    })
+
+  # Modification Modal Dialog ----
+  modal_assign_categorical <- modalDialog(
+    fluidPage(
+      h3(strong("Assign Groups"), align = "center"),
+      hr(),
+      dataTableOutput('row_assign'),
+      actionButton("save_changes","Save changes") #,
+      #tags$script(HTML("$(document).on('click', '#save_changes',
+      #   function () {
+      #      var list_value=[]
+      #      for (i = 0; i < $( '.new_input' ).length; i++) {
+      #          list_value.push($( '.new_input' )[i].value)
+      #      }
+      #      Shiny.onInputChange('newValue', list_value)
+      #  });"))
+    ),
+    size="l")
+
+
+  # Modification Modal Dialog ----
+  modal_group_categorical <- modalDialog(
+    fluidPage(
+      h3(strong("Group Categorical"), align = "center"),
+      hr() #,
+      #dataTableOutput('row_modif'),
+      #actionButton("save_changes","Save changes"),
+      #tags$script(HTML("$(document).on('click', '#save_changes',
+      #   function () {
+      #      var list_value=[]
+      #      for (i = 0; i < $( '.new_input' ).length; i++) {
+      #          list_value.push($( '.new_input' )[i].value)
+      #      }
+      #      Shiny.onInputChange('newValue', list_value)
+      #  });"))
+    ),
+    size="l")
+
+ ### observeEvent input$lastClick ----
   observeEvent(input$lastClick, {
     lid = input$lastClickId
 
-    #print(paste("observeEvent$lastClick", input$lastClickId ))
-    flog.info(paste("observeEvent$lastClick", input$lastClickId ))
-    #popup with name, method,
-
     if (str_detect(lid, "median")) {
       row_to_split <- as.numeric(gsub("median_","",lid))
-      flog.info(str_c("MEDIAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "median")
-      #vals$Data <- vals$Data[-row_to_delete]
     } else if (str_detect(lid, "mean")) {
       row_to_split <- as.numeric(gsub("mean_","",lid))
-      flog.info(str_c("MEAN row", lid, "row", row_to_split, sep = " ") )
       applyFactorButton(row_to_split, "mean")
-      #vals$Data <- vals$Data[-row_to_delete]
-    } else if (str_detect(lid, "modify")) {
-      flog.info("MODIFY")
-      row_to_modify <- as.numeric(gsub("modify_","",lid))
-      #print(str_c("MODIFYING that row", lid, row_to_modify, sep = " "))
-      #showModal(modal_modify)
+    } else if (str_detect(lid, "assign_")) {
+      row_to_modify <- as.numeric(gsub("assign_","",lid))
+      showModal(modal_assign_categorical)
+    } else if (str_detect(lid, "group_")) {
+      row_to_modify <- as.numeric(gsub("group_","",lid))
+      showModal(modal_group_categorical)
     } else {
-      flog.info("OTHER")
+      flog.error(str_c("input$lastClick: OTHER: ", lid))
     }
    })
 
-
- ##
- # observeEvent input$lastClick ----
-  observeEvent(input$lastGroupClick, {
-    lid = input$lastGroupClickId
-
-    flog.info("lastGroupClick DISABLED FOR NOW until we make the button operate on the right df")
-    return(NULL)
-   })
-
- output$allFactorsDataTable <- DT::renderDataTable({
-   details <- computedDetails()
-   if(nrow(details) == 0) {
-      return(NULL)
+ getFactorTableDetails <- function(is_continuous) {
+   if(is_continuous) {
+      details <- computedDetails() %>% dplyr::filter(type == "numeric")
+   } else {
+      details <- computedDetails() %>% dplyr::filter(type != "numeric")
    }
 
+   details <- details %>% 
+           select(name, unique_values, method_applied, ready, description,status)
+
    datatable(details, options = list(pageLength = 25),
      caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
- })
+ }
 
-
+ ### output$groupFactorsDataTable 
  output$groupFactorsDataTable <- DT::renderDataTable({
-   dtl <- computedDetails()
-   details <- computedDetails() %>% filter(type != "numeric")
-   if(nrow(details) == 0) {
-      return(NULL)
-   }
-
-   datatable(details, options = list(pageLength = 25),
-     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
-
+   getFactorTableDetails(FALSE)
  })
 
- output$groupFactorsDataTable <- DT::renderDataTable({
-   details <- computedDetails() %>% dplyr::filter(type != "numeric")
-   datatable(details, options = list(pageLength = 25),
-     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
- })
-
+ ### output$continuousFactorsDataTable 
  output$continuousFactorsDataTable <- DT::renderDataTable({
-   details <- computedDetails() %>% dplyr::filter(type == "numeric")
-   datatable(details, options = list(pageLength = 25),
-     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
+   getFactorTableDetails(TRUE)
  })
 
  describeDataFile <- function(f1) {
@@ -477,18 +506,11 @@ shinyServer(function(input, output, session) {
  #########
  ## output$factorVariables ----
  output$fp_factorVariables <- renderUI({
+   validate( need(orig_metadata(), 
+                  "No factors to show because no meta data loaded"))
 
-   orig_md <- orig_metadata()
-
-   if(is.null(orig_md)) {
-     return(h1("No factors to show because no meta data loaded"))
-   }
-
-   details <- computedDetails()
    return(tagList(
-      div(str_c("All variables: ", str_c(details$name, collapse = ", "))),
       tabsetPanel(type="tabs",
-
         tabPanel("Continuous",
           dataTableOutput("continuousFactorsDataTable")),
 
@@ -496,12 +518,6 @@ shinyServer(function(input, output, session) {
           dataTableOutput("groupFactorsDataTable"))),
 
       # each row has action buttons, notify shiny when clicked on
-      tags$script("$(document).on('click', '#allFactorsDataTable button',
-        function () {
-          Shiny.onInputChange('lastClickId',this.id);
-          Shiny.onInputChange('lastClick', Math.random())
-        });"),
-
       tags$script("$(document).on('click', '#continuousFactorsDataTable button',
         function () {
           Shiny.onInputChange('lastClickId',this.id);
@@ -513,27 +529,17 @@ shinyServer(function(input, output, session) {
           Shiny.onInputChange('lastClickId',this.id);
           Shiny.onInputChange('lastClick', Math.random())
         });")
-
     ))
  })
 
   ##############################################################
-  outputOptions(output, "hasFactorVariables",  suspendWhenHidden = FALSE)
 
   output$mvdataDataTable <- renderDataTable({
      req(mvdata())
      DT::datatable(mvdata())
   })
 
-
-  # output#metadataUI ----
-  output$metadataUI <- renderUI({
-     req(orig_metadata())
-
-     h1("metadataUI")
-     DT::datatable(orig_metadata())
-  })
-
+  ### output$metadataDataTable 
   output$metadataDataTable <- renderDataTable({
      req(orig_metadata())
      DT::datatable(orig_metadata())
@@ -615,6 +621,24 @@ shinyServer(function(input, output, session) {
     metaData(list())
   })
 
+  getButtons <- function(type,idnum,ready) {
+    print(str_c("getButtons: ", type, " ", idnum, " ", ready))
+    flog.info(str_c("getButtons: ", type, " ", idnum, " ", ready))
+    if(type == "numeric") {
+      splitButtons(idnum) 
+    } else {
+      categoricalSplitButtons(idnum, ready) 
+    }
+  }
+
+  getButtonsForRow <- function(r ) {
+          print(r)
+          browser()
+    print(str_c("R ", r, r$type, r$idnum, r$ready, sep=" "))
+    flog.info(str_c("R ", r, r$type, r$idnum, r$ready, sep=" "))
+    return("ROW")
+  }
+
   #-- EVENT input$setMetadataButton ----
   observeEvent(input$setMetadataButton, {
     df <- rlist()$dataframe()
@@ -643,11 +667,15 @@ shinyServer(function(input, output, session) {
        factorDetails(factors_df)
        setDetails(factors_df)
 
+       cd <- factors_df
        cd <- factors_df %>%
-          mutate(status = ifelse(type == "numeric", 
+          mutate(status = 
+                 ifelse(type == "numeric", 
                             splitButtons(idnum), 
-                            categoricalSplitButtons(idnum) )) %>%
-          select(name, type, num_unique, description, status )
+                            ifelse(ready, 
+                            categoricalSplitButtonsAssign(idnum), 
+                            categoricalSplitButtons(idnum) 
+                            ))) 
        computedDetails(cd)
        setDetails(factors_df)
     }

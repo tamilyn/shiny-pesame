@@ -53,10 +53,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
 
   ## display table
   output$mytable <- renderDataTable({
-     validate( need(v$data, "vvv data validate: No data"))
-
-     #DT::datatable(v$data, options = list(pageLength = 5),
-     #   caption = "Data Set Features", escape = FALSE)
+     validate( need(v$data, "No data loaded"))
      v$data
   })
 
@@ -238,11 +235,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     endCol <- as.integer(input$endCol)
 
     nd <- nrow(d)
-
-    flog.info(str_c("START applyRowColumnFilters: ", 
-      nd, startRow, startCol, endRow, endCol,
-      "DIM(d)", str_c(dim(d), collapse  = ", "), sep = " "))
-
     if ( (endRow > startRow) && (endRow <= nrow(d)) ) {
       lastRow <- endRow 
     } else {
@@ -262,11 +254,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
     if( (startCol != 1 || lastCol != ncol(d)) ) {
        d <- d[, startCol:endCol]
     }
-
-    flog.info(str_c("END applyRowColumnFilters: ", 
-      startRow, startCol, endRow, endCol,
-      "DIM(d)", str_c(dim(d), collapse  = ", "), sep = " "))
-
     d
   }
 
@@ -363,7 +350,7 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
   }
 
   description <- reactive({
-    validate( need(fileVal(), "validate description: No data loaded"))
+    validate( need(fileVal(), "Select a file"))
     return(str_c("File loaded: ", fileVal()))
   })
 

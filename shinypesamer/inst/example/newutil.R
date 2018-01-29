@@ -16,7 +16,7 @@ identify_factors <- function(df) {
   uniq_vals <- map_chr(names(df),
     function(x) {
       if(num_uniq[[x]] < 10) {
-        str_c(paste(uniq[[x]]), collapse = ", ")
+        str_c(paste(uniq[[x]]), collapse = ",")
       } else {
         str_c("num unique values: ", num_uniq[x])
       }
