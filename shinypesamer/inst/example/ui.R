@@ -19,10 +19,7 @@ analyze_panel <- tagList(
                 selected = significance.options.default )) ,
       column(4,  uiOutput("factorVariables") )),
 
-    tabsetPanel(type="tabs",
-      tabPanel("Plot", plotlyOutput("filteredPlotly")),
-      tabPanel("Table", dataTableOutput("computedDataTable")) 
-    ))))
+    uiOutput("dataTabPanel"))))
 
 
 top_part <- tags$nav(class="navbar navbar-default navbar-fixed-top",
@@ -61,8 +58,9 @@ load_data_content_main <-
 
 # factor_panel ----
 factor_panel <- tagList(
-  fluidRow(column(4,  uiOutput("fp_selectFactorVariables")),
-           column(8, uiOutput("selectFactorButtons"))),
+  fluidRow(column(4, uiOutput("fp_selectFactorVariables")),
+           column(4, uiOutput("selectFactorButtons")),
+           column(4, textOutput("selectedFactorDescription" ))),
   uiOutput("fp_factorVariables"))
 
 modal_equation <-

@@ -1,6 +1,7 @@
 library(dplyr)
 library(stringr)
 library(purrr)
+
 #
 identify_factors <- function(df) {
 
@@ -45,6 +46,7 @@ identify_factors <- function(df) {
 
     })
 
+  # need labels
   new_df <- data_frame(name = colnames(df),
                        num_unique = num_uniq,
                        unique_values = uniq_vals,

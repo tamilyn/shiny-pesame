@@ -59,7 +59,7 @@ shinyServer(function(input, output, session) {
   theSelectedFactor <- reactive({
     req(input$selectedFactor, metadata())
 
-    flog.info(str_c("selected factor: [", input$selectedFactor, "]", sep=""))
+    flog.info(str_c("selected factor:[", input$selectedFactor, "]"))
 
     fd <- metadata()
     if(!input$selectedFactor %in% names(fd)) {
@@ -71,10 +71,10 @@ shinyServer(function(input, output, session) {
     # other <- fd %>% pull(input$selectedFactor)
     # other does not have names, otherswise the values look the same
     # not sure those names are needed
-    fdata <- fd[, input$selectedFactor]
-    fdata <- unlist(fdata)
-    #browser()
-    fdata
+    fd %>% pull(input$selectedFactor) 
+    #fdata <- fd[, input$selectedFactor]
+    #fdata <- unlist(fdata)
+    #fdata
   })
 
   otut_for_processing <- reactive({
@@ -99,9 +99,13 @@ shinyServer(function(input, output, session) {
     }
 
     otut <- otut_for_processing()
-    flog.info(str_c("72: baseFilteredData",
-       "otut dim", str_c(dim(otut), collapse=" , "), sep =  " "))
+    if(is.null(otut)) {
+      flog.info("102: baseFilteredData: no otut")
+      return(NULL)
+    }
 
+    flog.info(str_c("72: baseFilteredData otut null?", is.null(otut), 
+                    "dim", str_c(dim(otut), collapse=" , "), sep =  " "))
     ft = tryCatch({
         suppressWarnings(helper.data_by_auc( otut = otut, fdata = sf, input$adj_method))
         }, warning = function(w) {
@@ -304,6 +308,17 @@ shinyServer(function(input, output, session) {
     msg
   })
 
+  ###-- panel at bottom of Analyze panel
+  output$dataTabPanel = renderUI({
+   validate( need(!is.null(otut_for_processing) && 
+                  !is.null(input$selectedFactor), 
+                  "No data - Data and meta data must be loaded"))
+   
+    tabsetPanel(type="tabs",
+      tabPanel("Plot", plotlyOutput("filteredPlotly")),
+      tabPanel("Table", dataTableOutput("computedDataTable"))) 
+  })
+
   ## output$factorVariables ----
   output$factorVariables = renderUI({
     af <- availableFactors()
@@ -314,158 +329,23 @@ shinyServer(function(input, output, session) {
     }
   })
 
- ###
- # create html action buttons for features which need to be split
- splitButtons <- function(idnum) {
-  paste0('<div class="btn-group" role="group" aria-label="Basic example">
-   <button type="button" class="btn btn-primary xbtn-secondary modify"id=median_',idnum,'>Median</button>
-   <button type="button" class="btn btn-primary xbtn-secondary modify"id=mean_',idnum,'>Mean</button>
-   </div>')
- }
-
-
- ### categoricalSplitButtons
- ### on Assign, should popup a window
- categoricalSplitButtons <- function(idnum) {
-  paste0('<div class="btn-group" role="group" aria-label="Basic example">
-   <button type="button" class="btn btn-primary xbtn-secondary modify"id=group_',idnum,'>Group</button>
-   </div>')
- }
-
- categoricalSplitButtonsAssign <- function(idnum) {
-  paste0('<div class="btn-group" role="group" aria-label="Basic example">
-   <button type="button" class="btn btn-primary xbtn-secondary modify"id=assign_',idnum,'>Assign</button>
-   </div>')
- }
-
-  output$row_assign <- DT::renderDataTable({
-    selected_row = as.numeric(gsub("assign_","",input$lastClickId))
-    flog.info(str_c("row assign SELECTED: ", selected_row))
-
-    details <- computedDetails() %>% dplyr::filter(idnum == selected_row)
-    uv <- details %>% pull(unique_values) %>% str_split(",") %>% unlist
-    df <- data_frame(variable=uv,label=uv)
-
-    datatable(df, options = list(pageLength = 25),
-     caption = "Assign Labels", escape = FALSE)
-
-#    old_row=vals$Data[selected_row]
-#    row_change=list()
-#    for (i in colnames(old_row)) {
-#      if (is.numeric(vals$Data[[i]])) {
-#          row_change[[i]]<-paste0('<input class="new_input" type="number" id=new_',i,'><br>')
-#      } else
-#        row_change[[i]]<-paste0('<input class="new_input" type="text" id=new_',i,'><br>')
-#      }
-#    row_change = as.data.table(row_change)
-#    setnames(row_change,colnames(old_row))
-#    DT = rbind(old_row,row_change)
-#    rownames(DT) <- c("Current values","New values")
-#    DT
-#    },escape=F,options=list(dom='t',ordering=F),selection="none"
-    })
-
-  # Modification Modal Dialog ----
-  modal_assign_categorical <- modalDialog(
-    fluidPage(
-      h3(strong("Assign Groups"), align = "center"),
-      hr(),
-      #dataTableOutput('row_assign'),
-      actionButton("save_changes","Save changes") #,
-      #tags$script(HTML("$(document).on('click', '#save_changes',
-      #   function () {
-      #      var list_value=[]
-      #      for (i = 0; i < $( '.new_input' ).length; i++) {
-      #          list_value.push($( '.new_input' )[i].value)
-      #      }
-      #      Shiny.onInputChange('newValue', list_value)
-      #  });"))
-    ),
-    size="l")
-
-
-  # Modification Modal Dialog ----
-  modal_group_categorical <- modalDialog(
-    fluidPage(
-      h3(strong("Group Categorical"), align = "center"),
-      hr() #,
-      #dataTableOutput('row_modif'),
-      #actionButton("save_changes","Save changes"),
-      #tags$script(HTML("$(document).on('click', '#save_changes',
-      #   function () {
-      #      var list_value=[]
-      #      for (i = 0; i < $( '.new_input' ).length; i++) {
-      #          list_value.push($( '.new_input' )[i].value)
-      #      }
-      #      Shiny.onInputChange('newValue', list_value)
-      #  });"))
-    ),
-    size="l")
-
   observeEvent(input$applyMean, {
-     row_to_split = input$selectedViewFactor
-     print(str_c("apply mean ", row_to_split))
-     applyFactorButton(row_to_split, "mean")
-    })
+     applyFactorButton(input$selectedViewFactor, "mean")
+  })
 
   observeEvent(input$applyMedian, {
-     row_to_split = input$selectedViewFactor
-     print(str_c("apply median ", row_to_split))
-     applyFactorButton(row_to_split, "median")
-    })
+     applyFactorButton(input$selectedViewFactor, "median")
+  })
 
   observeEvent(input$applyGroup, {
-     row_to_split = input$selectedViewFactor
-     print(str_c("apply group ", row_to_split))
-     showModal(modal_group_categorical)
-    })
-
+     sf <- input$selectedViewFactor
+     print(str_c("ASSIGN GROUP CATEGORICAL:[", sf, "]"))
+  })
 
   observeEvent(input$applyAssign, {
-     row_to_split = input$selectedViewFactor
-     print(str_c("apply assign ", row_to_split))
-     showModal(modal_assign_categorical)
-    })
-
- ### observeEvent input$lastClick ----
-  observeEvent(input$lastClick, {
-    lid = input$lastClickId
-
-    if (str_detect(lid, "median")) {
-      row_to_split <- as.numeric(gsub("median_","",lid))
-      applyFactorButton(row_to_split, "median")
-    } else if (str_detect(lid, "mean")) {
-      row_to_split <- as.numeric(gsub("mean_","",lid))
-      applyFactorButton(row_to_split, "mean")
-    } else if (str_detect(lid, "assign_")) {
-      row_to_modify <- as.numeric(gsub("assign_","",lid))
-      showModal(modal_assign_categorical)
-    } else if (str_detect(lid, "group_")) {
-      row_to_modify <- as.numeric(gsub("group_","",lid))
-      showModal(modal_group_categorical)
-    } else {
-      flog.error(str_c("input$lastClick: OTHER: ", lid))
-    }
-   })
-
- getFactorTableDetails <- function(is_continuous) {
-   if(is_continuous) {
-      details <- computedDetails() %>% dplyr::filter(type == "numeric")
-   } else {
-      details <- computedDetails() %>% dplyr::filter(type != "numeric")
-   }
-
-   details <- details %>%
-           select(name, unique_values, method_applied, ready, description,status)
-
- }
-
- ### output$groupFactorsDataTable
- output$groupFactorsDataTable <- DT::renderDataTable({
-   details <- getFactorTableDetails(FALSE)
-   datatable(details, options = list(pageLength = 25),
-     caption = "Data Set Features (analysis can only be performed on 2 level factors)", escape = FALSE)
- })
+     sf <- input$selectedViewFactor
+     selected = input$selectedViewFactor
+  })
 
  ### output$factorsDataTable
  output$factorsDataTable <- function() {
@@ -474,25 +354,16 @@ shinyServer(function(input, output, session) {
 
    details <- computedDetails() 
    orig_fd <- orig_metadata()
-   fd <- metadata()
 
-   #fdata <- fd[, input$selectedFactor]
-   # get details for all the variables in details
-   # and skim them
    my_skim <- skim(orig_fd)
-
    my_skim_1 <- my_skim  %>%
      dplyr::filter(stat == "hist") %>%
      select(variable,Histogram=formatted)
 
    details2 <- details %>%
      left_join(my_skim_1, by=c("name"="variable")) %>%
-     select(-status)
-
-   details2 %>%
      knitr::kable("html") %>%
      kable_styling("striped", full_width = FALSE)
-
  }
 
 
@@ -545,7 +416,7 @@ shinyServer(function(input, output, session) {
    if(is.null(af) || length(af) == 0) {
      return("No factors")
    }
-   return(str_c("availabe factors: ", length(af)))
+   return(str_c("available factors: ", length(af)))
  })
 
  output$describeDataFiles <- renderText({ describeDataFiles() })
@@ -555,29 +426,47 @@ shinyServer(function(input, output, session) {
 
  output$fp_selectFactorVariables <- renderUI({
     af <- computedDetails() %>% pull(name)
-    selectInput('selectedViewFactor', 'Select Factor', af )
+    selectInput('selectedViewFactor', 'Factor', af )
+ })
+
+ selectedFactorValues <- reactive({
+      orig_metadata() %>% pull(input$selectedViewFactor) %>% unique
+ })
+
+ output$selectedFactorDescription <- renderText({
+   "the description of the current settings here"
  })
 
  output$selectFactorButtons <- renderUI({
    validate( need(input$selectedViewFactor,
                   "No factors to show because no meta data loaded"))
 
-    msg <- input$selectedViewFactor
-    print(msg)
+    selected <- input$selectedViewFactor
+    print(selected)
 
     details <- allOriginalFactor()
     kind <- details %>% 
-            dplyr::filter(name==input$selectedViewFactor) %>% 
+            dplyr::filter(name == input$selectedViewFactor) %>% 
             dplyr::pull(type)
 
+    flog.info("FACTOR BUTTONS")
     if(kind=="numeric") {
      tagList(
-               actionButton("applyMean", "Mean"),
-               actionButton("applyMedian", "Median"))
+        actionButton("applyMean", "Mean"),
+        actionButton("applyMedian", "Median"))
     } else {
       tagList(
-               actionButton("applyGroup", "Group"),
-               actionButton("applyAssign", "Assign"))
+           selectInput('assignVar', 'Value', selectedFactorValues()),
+           textInput("factorAssignLabel", "Labels (false,true)"),
+           textInput("trueLevels", "True Levels (separate by commas")#,
+           #textOutput("selectedFactorDescription", "Current settings")
+
+           ## TRUE LABEL, FALSE LABEL GROUP TRUE/FALSE
+           ## APPLY CHANGES ?
+           #actionButton("applyGroupTrue", "True"),
+           #actionButton("applyGroupFalse", "False"),
+           #actionButton("applyAssign", "Assign Label")
+           )
     }
  })
 
@@ -605,12 +494,6 @@ shinyServer(function(input, output, session) {
 
   setDetails <- function(details) {
        rdetails = details %>% dplyr::filter(ready)
-       pdetails = details %>% dplyr::filter(!ready)
-
-       flog.info(str_c("setDetails: all: ", nrow(details),
-                " available: ", nrow(rdetails),
-            " need processing: ", nrow(pdetails) ))
-
        allOriginalFactor(details)
        availableFactors(rdetails$name)
   }
@@ -677,9 +560,7 @@ shinyServer(function(input, output, session) {
 
     cd <- z_df
 
-
     flog.info("UPDATING computedDetails")
-
     #browser()
     computedDetails(cd)
     setDetails(details)
@@ -732,17 +613,7 @@ shinyServer(function(input, output, session) {
        factorDetails(factors_df)
        setDetails(factors_df)
 
-       cd <- factors_df
-       cd <- factors_df %>%
-          mutate(status =
-                 ifelse(type == "numeric",
-                            splitButtons(idnum),
-                            ifelse(ready,
-                            categoricalSplitButtonsAssign(idnum),
-                            categoricalSplitButtons(idnum)
-                            )))
-       computedDetails(cd)
-       setDetails(factors_df)
+       computedDetails(factors_df)
     }
   })
 

@@ -162,6 +162,11 @@ Source: CRAN
 Version: 1.7-3
 Hash: 35bb918af8083a48e24cc3a606cfb33c
 
+Package: Rttf2pt1
+Source: CRAN
+Version: 1.3.5
+Hash: 4b265a9ddbba0feae70d7c58ab6ba2a5
+
 Package: S4Vectors
 Source: Bioconductor
 Version: 0.14.7
@@ -422,6 +427,17 @@ Version: 0.10.1
 Hash: 54d95f4ec6d0300100413ed0127d89ae
 Requires: stringr
 
+Package: extrafont
+Source: CRAN
+Version: 0.17
+Hash: d9555d8cfe70b3372d066648400770b5
+Requires: Rttf2pt1, extrafontdb
+
+Package: extrafontdb
+Source: CRAN
+Version: 1.0
+Hash: 72269616f582dc675c90ecd025af2754
+
 Package: fastmatch
 Source: CRAN
 Version: 1.1-0
@@ -450,6 +466,12 @@ Source: CRAN
 Version: 1.4.4
 Hash: 4df5ab2c8c35382dacab75d414da6748
 Requires: iterators
+
+Package: formattable
+Source: CRAN
+Version: 0.2.0.1
+Hash: 64836860c4666eadc229c6e47fdd2261
+Requires: htmltools, htmlwidgets, knitr, rmarkdown
 
 Package: fpc
 Source: CRAN
@@ -604,6 +626,13 @@ Source: CRAN
 Version: 1.5
 Hash: 9c51936d8dd00b2f1d4fe9d10499694c
 
+Package: kableExtra
+Source: CRAN
+Version: 0.7.0
+Hash: f511338dd70c68a8f7130568d0b4a392
+Requires: htmltools, knitr, magrittr, readr, rmarkdown, rvest, scales,
+    stringr, viridisLite, xml2
+
 Package: kernlab
 Source: CRAN
 Version: 0.9-25
@@ -666,6 +695,12 @@ Source: CRAN
 Version: 1.7.1
 Hash: 4393610161ddb7066e9ca3f7aa2188bd
 Requires: Rcpp, stringr
+
+Package: magick
+Source: CRAN
+Version: 1.6
+Hash: 08538f267432d504adfbcb0ca55755c9
+Requires: Rcpp, curl, knitr, magrittr
 
 Package: magrittr
 Source: CRAN
@@ -769,6 +804,12 @@ Package: packrat
 Source: CRAN
 Version: 0.4.8-1
 Hash: 6ad605ba7b4b476d84be6632393f5765
+
+Package: pander
+Source: CRAN
+Version: 0.6.1
+Hash: 27bb6234744ab998d64774c67651195c
+Requires: Rcpp, digest
 
 Package: pillar
 Source: CRAN
@@ -970,6 +1011,12 @@ Version: 1.0.3
 Hash: 44837671df6bf1d0b863dc6f83f42a16
 Requires: curl, xml2
 
+Package: rvest
+Source: CRAN
+Version: 0.3.2
+Hash: c69f7526520bad66fd2111ebe8b1364b
+Requires: httr, magrittr, selectr, xml2
+
 Package: sandwich
 Source: CRAN
 Version: 2.4-0
@@ -982,6 +1029,12 @@ Version: 0.5.0
 Hash: 1e70c4e1dcc1c51847edc9f4bc11a81e
 Requires: R6, RColorBrewer, Rcpp, dichromat, labeling, munsell, plyr,
     viridisLite
+
+Package: selectr
+Source: CRAN
+Version: 0.3-1
+Hash: 367275e3dcdd208339e131c7a41bec56
+Requires: stringr
 
 Package: semver
 Source: CRAN
@@ -1018,6 +1071,13 @@ Source: CRAN
 Version: 1.0
 Hash: ea95f751025e50227a96100be35e970b
 Requires: digest, htmltools, jsonlite, shiny
+
+Package: skimr
+Source: CRAN
+Version: 1.0.1
+Hash: 8d31b1004f59e03dd10dec43ea98f5df
+Requires: dplyr, knitr, magrittr, pander, purrr, rlang, stringr,
+    tibble, tidyr, tidyselect
 
 Package: sourcetools
 Source: CRAN
