@@ -1,3 +1,5 @@
+source("install-packages.R")
+
 library(shiny)
 library(shinyjs)
 library(bsplus)
@@ -10,10 +12,10 @@ library(DT)
 
 source("fileImporterModule.R")
 
-## fileFormats ---- 
+## fileFormats ----
 fileFormats = c('text/csv',
-                'text/comma-separated-values', 
-                'text/tab-separated-values', 
+                'text/comma-separated-values',
+                'text/tab-separated-values',
                 'text/plain','.csv','.tsv',
                 '.xlsx', '.xls')
 
@@ -37,12 +39,12 @@ significance.options <- list(
 significance.options.default = significance.options[3]
 
 #----
-method.options.all = list("holm" = "holm", 
-     "hochberg" = "hochberg", 
-     "hommel" = "hommel", 
+method.options.all = list("holm" = "holm",
+     "hochberg" = "hochberg",
+     "hommel" = "hommel",
      "bonferroni" = "bonferroni",
      "BH" = "BH",
-     "BY" = "BY", 
+     "BY" = "BY",
      "fdr" = "fdr",
      "none" = "none")
 
@@ -53,12 +55,12 @@ method.options = list( "bonferroni" = "bonferroni",
 method.options.default = "fdr"
 
 #----
-input.options = list( "Excel" = "excel", 
-                      "CSV" = "csv", 
+input.options = list( "Excel" = "excel",
+                      "CSV" = "csv",
                       "Rdata" = "rdata")
 
 input.options.default = "excel"
-  
+
 #----
 bar_colors = brewer.pal(5, "Set2")
 

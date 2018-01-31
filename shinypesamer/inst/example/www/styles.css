@@ -128,3 +128,6 @@ table.dataTable {
   background-color: white;
 }
 
+#applyMean, #applyMedian, #applyAssign, #applyGroup {
+  margin-top: 25px;
+}

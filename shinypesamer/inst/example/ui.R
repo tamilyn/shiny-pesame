@@ -60,7 +60,10 @@ load_data_content_main <-
 
 
 # factor_panel ----
-factor_panel <- uiOutput("fp_factorVariables")
+factor_panel <- tagList(
+  fluidRow(column(4,  uiOutput("fp_selectFactorVariables")),
+           column(8, uiOutput("selectFactorButtons"))),
+  uiOutput("fp_factorVariables"))
 
 modal_equation <-
   bs_modal(

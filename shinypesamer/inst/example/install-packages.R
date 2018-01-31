@@ -38,7 +38,9 @@ packages <- c("devtools",
 "shinyjs",
 "devtools",
 "stringr",
-"lubridate")
+"lubridate",
+"skimr",
+"kableExtra")
 check.packages(packages)
 
 
