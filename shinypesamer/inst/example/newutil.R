@@ -54,5 +54,7 @@ identify_factors <- function(df) {
                        ready = (num_unique == 2),
                        type = types,
                        description = descriptions,
+                       labels = "FALSE,TRUE",
+                       true_labels = "TRUE",
                        idnum = 1:length(colnames(df)))
 }

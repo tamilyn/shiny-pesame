@@ -4,7 +4,6 @@ library(shiny)
 library(shinyjs)
 library(bsplus)
 library(dplyr)
-library(RColorBrewer)
 library(plotly)
 library(futile.logger)
 library(DT)
@@ -18,8 +17,6 @@ fileFormats = c('text/csv',
                 'text/tab-separated-values',
                 'text/plain','.csv','.tsv',
                 '.xlsx', '.xls')
-
-
 
 
 ## significance.options ----
@@ -60,17 +57,5 @@ input.options = list( "Excel" = "excel",
                       "Rdata" = "rdata")
 
 input.options.default = "excel"
-
-#----
-bar_colors = brewer.pal(5, "Set2")
-
-to_color <- function(q) {
-    if(q == "AD") {
-      r = bar_colors[1]
-    } else {
-      r = bar_colors[2]
-    }
-    return(r)
-}
 
 
