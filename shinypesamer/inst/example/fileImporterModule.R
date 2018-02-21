@@ -289,7 +289,6 @@ fileImporterFile <- function(input, output, session, fi, fileOptions ) {
 
     sheets <- readxl::excel_sheets(userFile()$datapath)
     v$sheets = sheets
-    flog.info(str_c("215: availableSheets ", str_c(sheets, collapse=", ")))
     return(sheets)
   })
 

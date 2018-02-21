@@ -7,6 +7,7 @@ library(dplyr)
 library(plotly)
 library(futile.logger)
 library(DT)
+library(stringr)
 #library(shinypesamer)
 
 source("fileImporterModule.R")

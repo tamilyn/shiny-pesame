@@ -1,5 +1,5 @@
 
-body { padding-top: 145px; }
+body { padding-top: 140px; }
 
 .value {
   font-size: 14pt; color: #660099; 
@@ -109,11 +109,11 @@ table.dataTable {
 #describeDataFiles, #describeMetaDataFiles, #describeFactors {
   background-color: silver;
   color: black;
-  font-size: 1.5em;
+  font-size: 1.2em;
 }
 
 #inputFile-error, .error, #statusMessage {
-  font-size: 1.5em;
+  font-size: 1.2em;
   color: red;
   background-color: pink;
 

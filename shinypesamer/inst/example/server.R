@@ -39,14 +39,9 @@ shinyServer(function(input, output, session) {
     mvdata(df)
   })
 
-
-##################
-
-
   ###-- BEGIN reactive values ----
   availableFactors <- reactiveVal(list())
   allOriginalFactor <- reactiveVal(list())
-  factorDetails <- reactiveVal(list())
   computedDetails <- reactiveVal(list())
 
   metadata <- reactiveVal(NULL)
@@ -62,18 +57,11 @@ shinyServer(function(input, output, session) {
 
     fd <- metadata()
     if(!input$selectedFactor %in% names(fd)) {
-      flog.info("theSelectedFactor not available in this dataset.")
+      flog.info("theSelectedFactor not available")
       return(NULL)
     }
 
-    # probably a call for pull
-    # other <- fd %>% pull(input$selectedFactor)
-    # other does not have names, otherswise the values look the same
-    # not sure those names are needed
     fd %>% pull(input$selectedFactor)
-    #fdata <- fd[, input$selectedFactor]
-    #fdata <- unlist(fdata)
-    #fdata
   })
 
   otut_for_processing <- reactive({
@@ -90,10 +78,8 @@ shinyServer(function(input, output, session) {
     req(input$signficance_threshold)
 
     sf <- theSelectedFactor()
-    flog.info(str_c("93: baseFilteredData: sf[", sf, "]"))
     if(length(sf) == 0) {
       flog.info("98: baseFilteredData: no factor data")
-      #browser()
       return(NULL)
     }
 
@@ -112,7 +98,6 @@ shinyServer(function(input, output, session) {
          NULL
         }, error = function(w) {
          flog.error(str_c("113 baseFilteredData helper error ", w))
-         #browser()
          NULL
         })
 
@@ -167,9 +152,17 @@ shinyServer(function(input, output, session) {
     dd
   })
 
-  ###########################################################
-  # output$metadataTable ----
-  output$computedDataTable <- renderDataTable({
+  ### output$analyze_table ----
+  output$analyze_table <- renderDataTable({
+     fd <- filteredData()
+
+#     DT::datatable(filteredData(), options = list(
+#        rowCallback = JS(
+#           "function(row, data) {",
+#               "var num = Math.round(data[3]*100)/100 ;",
+#               "$('td:eq(3)', row).html(num);",
+#    "}")))
+
      DT::datatable(filteredData())
   })
 
@@ -194,7 +187,6 @@ shinyServer(function(input, output, session) {
   # use plot_ly to display data
   # generatePlot_ly ----
   generatePlot_ly <- function(dd) {
-    flog.info(paste("211: generatePlot_ly"))
     if(length(dd) <= 0) {
       flog.error(paste("126: returning empty plot_ly,no rows"))
       return(ggplot())
@@ -218,9 +210,9 @@ shinyServer(function(input, output, session) {
     hover.text = paste(dd$Names, " Auc ",round(dd$auc,2)," high: ", round(dd$high,2), "low", round(dd$low,2))
 
 
-    #nn <- list(level0="pink", level1="lightblue")
-    dd$color <- map_chr(dd$auc, ~ ifelse(. < 0.5, "pink", "lightblue"))
+    layout_title <- str_c( "LEGEND: ", selectedFactorLabels() )
 
+    dd$color <- map_chr(dd$auc, ~ ifelse(. < 0.5, "pink", "lightblue"))
     p <- dd %>%
       plot_ly( ) %>%
       add_bars( x = ~dd$heights,
@@ -237,30 +229,42 @@ shinyServer(function(input, output, session) {
       add_markers( x = ~dd$low - 0.5, y = ~dd$Names, marker = list(symbol=142, color="black"), showlegend = FALSE ) %>%
       add_markers( x = ~dd$high - 0.5, y = ~dd$Names, marker = list(symbol=142, color="black"), showlegend = FALSE,
                    hoverinfo = "none" ) %>%
-      add_segments( x = ~dd$low - 0.5, xend = ~dd$high - 0.5, y = ~dd$Names, yend = ~dd$Names, color = toRGB("black"),
-                    showlegend = FALSE,  hoverinfo = "none") %>%
-      layout(title =NULL, xaxis = my.xaxis, margin = list(l=120,t=50,b=30,unit="pt",pad=2),
-           yaxis = list(title=""))
+      add_segments( x = ~dd$low - 0.5,
+                   xend = ~dd$high - 0.5,
+                   y = ~dd$Names,
+                   yend = ~dd$Names,
+                   color = toRGB("black"),
+                   showlegend = FALSE,
+                   hoverinfo = "none") %>%
+      layout(title = layout_title,
+             xaxis = my.xaxis,
+             margin = list(l=120,t=50,b=30,unit="pt",pad=2),
+             yaxis = list(title=""))
 
-      ## add text with the labels
-
-      #browser()
     p
   }
 
+
+  selectedFactorLabels <- reactive({
+    req(input$selectedFactor)
+
+    this_factor <- computedDetails() %>%
+            filter(name == input$selectedFactor)
+    this_factor$labels
+  })
+
   # output$filteredPlotly ----
-  #     this uses f the factor
   output$filteredPlotly <- renderPlotly({
     req(input$signficance_threshold, input$selectedFactor)
 
     dd <- filteredData()
-   flog.info(str_c("FILTERED PLOTLY: dd length ==> null? ", is.null(dd), " length", length(dd)))
     if(is.null(dd) || length(dd) == 0) {
        flog.info("filteredPlotly: NO DATA")
        return(NULL)
     }
 
     sf = theSelectedFactor()
+
     dd$Enriched = levels(sf)[(dd$auc<.5) + 1]
 
     dd$heights = dd$auc - 0.5
@@ -320,7 +324,7 @@ shinyServer(function(input, output, session) {
 
     tabsetPanel(type="tabs",
       tabPanel("Plot", plotlyOutput("filteredPlotly")),
-      tabPanel("Table", dataTableOutput("computedDataTable")))
+      tabPanel("Table", dataTableOutput("analyze_table")))
   })
 
   ## output$factorVariables ----
@@ -334,11 +338,11 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$applyMean, {
-     applyFactorButton(input$selectedViewFactor, "mean")
+     applyFactorNumeric(input$selectedViewFactor, "mean")
   })
 
   observeEvent(input$applyMedian, {
-     applyFactorButton(input$selectedViewFactor, "median")
+     applyFactorNumeric(input$selectedViewFactor, "median")
   })
 
  ### output$factorsDataTable
@@ -436,17 +440,18 @@ shinyServer(function(input, output, session) {
 
    selected <- input$selectedViewFactor
    af <- computedDetails()
-   glimpse(af)
 
    this_factor <- af %>% filter(name == selected)
    if(this_factor$type == "numeric") {
       return(NULL)
    }
 
+   fvals <- str_split(this_factor$unique_values, ",") %>% unlist
+
    # based on type of factor
    tagList(
-     textInput("level0Label", "Level 0 Label"),
-     textInput("level1Label", "Level 1 Label"),
+     textInput("level0Label", "Level 0 Label", fvals[1]),
+     textInput("level1Label", "Level 1 Label", fvals[2]),
      div(actionButton("applyFactorGroupButton","Apply")))
  })
 
@@ -469,7 +474,7 @@ shinyServer(function(input, output, session) {
         actionButton("applyMedian", "Median"))
     } else {
       tagList(
-        #need to initialize with the current settings
+        #need to initialize with current settings
         checkboxGroupInput("level0checkboxes",
           "Select Level 0 Values", selectedFactorValues()))
     }
@@ -503,13 +508,12 @@ shinyServer(function(input, output, session) {
        availableFactors(rdetails$name)
   }
 
-  applyFactorButtonGroup <- function(ft, level0) {
-    flog.info(str_c("applyFactorButtonGroup: [", ft, "] level0 ", level0))
-    # 1. update the data
-    # 2. update the factor table
+  ### applyFactorGroup
+  # BUG: updates the data but not the displayed table
+  # BUG: does not update the labels
+  applyFactorGroup <- function(ft, level0) {
+    flog.info(str_c("applyFactorGroup: [", ft, "] level0 ", level0))
 
-    # orig_md - original meta data
-    # md - orig_md with factorized data (values converted to TRUE/FALSE)
     orig_md <- orig_metadata()
     md <- metadata()
 
@@ -524,60 +528,47 @@ shinyServer(function(input, output, session) {
     new_descript <- str_c("Factor group applied")
 
     tp <- "factorgroup"
+    f_labels <- str_c(input$level0Label, ",", input$level1Label, sep="")
+    f_true_label = input$level1Label
+    print("labels")
+    print(f_labels)
+    other_factors <- details %>% dplyr::filter(name != ft)
 
-    n_df <- data_frame(name=ft,
-                       new_ready=TRUE,
-                       new_method_applied="factorgroup",
-                       des=new_descript)
+    # get the labels and true values
+    this_factor <- details %>%
+       dplyr::filter(name == ft) %>%
+       mutate(ready = TRUE,
+              method_applied = "factorgroup",
+              description = "Factor group applied",
+              labels = f_labels,
+              true_label = f_true_label)
 
-    k_df <- details %>% left_join(n_df, by=c("name"="name"))
+    details <- bind_rows(this_factor, other_factors)
 
-    z_df <- k_df %>%
-            mutate(ready = ifelse(is.na(new_ready), ready, new_ready)) %>%
-            mutate(description = ifelse(is.na(des), description, des)) %>%
-            mutate(method_applied =
-              ifelse(is.na(new_method_applied),
-                    method_applied, new_method_applied)) %>%
-            select(-new_ready, -des, -new_method_applied)
+    cd_other <- computedDetails() %>% dplyr::filter(name != ft)
+    cd_this <- computedDetails() %>% dplyr::filter(name == ft)
+    cd_this <- cd_this %>%
+       mutate(ready = TRUE,
+              method_applied = "factorgroup",
+              description = "Factor group applied",
+              labels = f_labels,
+              true_label = f_true_label)
+    cd <- bind_rows(cd_other, cd_this)
 
-    details <- z_df
+    flog.info("UPDATING applyFactorGroup computedDetails")
 
-    cd <- computedDetails() %>%
-            mutate(ready, ifelse(name==ft,TRUE,ready)) %>%
-            mutate(method_applied, ifelse(name==ft,tp,method_applied))  %>%
-            mutate(description, ifelse(name==ft,new_descript,description))
-
-
-    k_df <- computedDetails() %>% left_join(n_df, by=c("name"="name"))
-
-    z_df <- k_df %>%
-      mutate(ready = ifelse(is.na(new_ready), ready, new_ready)) %>%
-      mutate(description = ifelse(is.na(des), description, des)) %>%
-      mutate(method_applied =
-               ifelse(is.na(new_method_applied),
-                      method_applied, new_method_applied)) %>%
-      select(-new_ready, -des, -new_method_applied)
-
-    cd <- z_df
-
-    flog.info("UPDATING GROUP computedDetails")
-    #browser()
     computedDetails(cd)
     setDetails(details)
   }
-  applyFactorButton <- function(ft, tp) {
-    flog.info(str_c("applyFactorButton: ", ft, " tp ", tp))
 
-    # 1. update the data
-    # 2. update the factor table
-
-    # orig_md - original meta data
-    # md - orig_md with factorized data (values converted to TRUE/FALSE)
+  ### applyFactorNumeric
+  applyFactorNumeric <- function(ft, fmethod) {
+    flog.info(str_c("applyFactorNumeric: ", ft, " fmethod ", fmethod))
     orig_md <- orig_metadata()
     md <- metadata()
 
     selected_factor <- orig_md %>% pull(ft)
-    if (tp == "median") {
+    if (fmethod == "median") {
        midpoint = median(selected_factor, na.rm = TRUE)
     } else {
        midpoint = mean(selected_factor, na.rm = TRUE)
@@ -588,12 +579,12 @@ shinyServer(function(input, output, session) {
     details <- allOriginalFactor()
 
     mp <- round(midpoint,2)
-    new_descript <- str_c("0 = below or at ", tp,
+    new_descript <- str_c("0 = below or at ", fmethod,
         " 1 = above (", mp, ")",sep = "")
 
     n_df <- data_frame(name=ft,
                        new_ready=TRUE,
-                       new_method_applied=tp,
+                       new_method_applied=fmethod,
                        des=new_descript)
 
     k_df <- details %>% left_join(n_df, by=c("name"="name"))
@@ -610,7 +601,7 @@ shinyServer(function(input, output, session) {
 
     cd <- computedDetails() %>%
             mutate(ready, ifelse(name==ft,TRUE,ready)) %>%
-            mutate(method_applied, ifelse(name==ft,tp,method_applied))  %>%
+            mutate(method_applied, ifelse(name==ft,fmethod,method_applied))  %>%
             mutate(description, ifelse(name==ft,new_descript,description))
 
 
@@ -626,15 +617,13 @@ shinyServer(function(input, output, session) {
 
     cd <- z_df
 
-    flog.info("UPDATING computedDetails")
-    #browser()
+    flog.info("UPDATING applyFactorNumeric computedDetails")
     computedDetails(cd)
     setDetails(details)
   }
 
   observeEvent(input$applyFactorGroupButton, {
-    #need to apply this
-    applyFactorButtonGroup(input$selectedViewFactor, input$level0checkboxes)
+    applyFactorGroup(input$selectedViewFactor, input$level0checkboxes)
   })
 
   #-- EVENT input$resetButton ----
@@ -648,7 +637,6 @@ shinyServer(function(input, output, session) {
 
     availableFactors(list())
     allOriginalFactor(list())
-    factorDetails(list())
     computedDetails(list())
 
     mainData(list())
@@ -675,44 +663,15 @@ shinyServer(function(input, output, session) {
     # reset everything to empty
     availableFactors(list())
     allOriginalFactor(list())
-    factorDetails(list())
     computedDetails(list())
 
     if(ncol(df) >= 1) {
        factors_df <- identify_factors(df)
 
-       factorDetails(factors_df)
        setDetails(factors_df)
 
        computedDetails(factors_df)
     }
-  })
-
-  #-- EVENT input$applySplitButton ----
-  observeEvent(input$applySplitButton, {
-
-       ft <- input$fp_pselectedFactor
-       tp <- input$fp_processtype
-
-       orig_md <- orig_metadata()
-       md <- metadata()
-
-       which <- orig_md[ , ft]
-       if (tp == "median") {
-         midpoint = median(which)
-       } else {
-         midpoint = mean(which)
-       }
-       md[ , ft ] <- orig_md[ , ft] > midpoint
-       metadata(md)
-
-       uniqvals <- apply(md, 2, function(x) { length(unique(x)) } )
-       details <- data_frame(uniqvals = uniqvals,
-          name=colnames(md),  description=colnames(md)) %>%
-          mutate(ready = ifelse(uniqvals != 2, FALSE, TRUE),
-                 description = ifelse(ready, name, str_c(name, sep=" ")))
-
-       setDetails(details)
   })
 
   observe({

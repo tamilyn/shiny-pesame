@@ -2,59 +2,60 @@ library(dplyr)
 library(stringr)
 library(purrr)
 
-#
-identify_factors <- function(df) {
 
-  num_uniq <- map_int(names(df), function(x) {
-      df %>% dplyr::pull(x) %>% unique %>% length })
+uniq_vals_description <- function(f) {
+  uu <- unique(f)
+  if(class(uu)=="numeric") {
+    return(str_c("#unique: ", length(uu)))
+  }
+  s <- str_c(uu, collapse = ",")
+  if (nchar(s) > 20) {
+    s <- str_c( str_sub(s, 1, 16), "...")
+  }
+  s
+}
 
-  uniq <- map(names(df), function(x) {
-      df %>% dplyr::pull(x) %>% unique })
+update_grouping_factor <- function(nm, f, labels, true_label) {
+}
 
-  names(num_uniq) <- names(df)
-  names(uniq) <- names(df)
+handle_factor <- function(nm, f) {
 
-  uniq_vals <- map_chr(names(df),
-    function(x) {
-      if(num_uniq[[x]] < 10) {
-        s <- str_c(paste(uniq[[x]]), collapse = ",")
-        if (nchar(s) < 20) {
-          s
-        } else {
-          str_c("num unique values: ", num_uniq[x])
-        }
-      } else {
-        str_c("num unique values: ", num_uniq[x])
-      }
-    })
+  u_vals <- unique(f)
+  num_unique <- length(u_vals)
+  ready <- (num_unique == 2)
+  type <- class(u_vals)
 
-  #names(uniq_vals) <- names(df)
-  types <- map_chr(names(df), function(x) { class( uniq[[x]] ) })
-  names(types) <- names(df)
+  labels <- "FALSE,TRUE"
+  true_label <- "TRUE"
 
-  descriptions <- map_chr(names(df), function(x) {
-    if(types[[x]] == "numeric") {
-            vals <- df[[x]]
-      sprintf("Numeric: min %4.3f max %4.3f median %4.3f mean %4.3f",
-              min(vals, na.rm = TRUE),
-              max(vals, na.rm = TRUE),
-              median(vals, na.rm = TRUE),
-              mean(vals, na.rm = TRUE))
-    } else {
-     sprintf("character, num values %d", num_uniq[[x]])
+  if(type == "numeric") {
+    description <- sprintf("Numeric: min %4.3f max %4.3f median %4.3f mean %4.3f",
+            min(f, na.rm = TRUE),
+            max(f, na.rm = TRUE),
+            median(f, na.rm = TRUE),
+            mean(f, na.rm = TRUE))
+  } else {
+    description <- sprintf("character, num values %d", num_unique)
+    if(num_unique == 2) {
+      labels <- str_c(u_vals, collapse = ",")
+      true_label <- u_vals[2]
     }
+  }
 
-    })
-
-  # need labels
-  new_df <- data_frame(name = colnames(df),
-                       num_unique = num_uniq,
-                       unique_values = uniq_vals,
+  uu <- uniq_vals_description(f)
+  new_df <- data_frame(name = nm,
+                       num_unique = num_unique,
+                       unique_values = uu,
                        method_applied = "none",
                        ready = (num_unique == 2),
-                       type = types,
-                       description = descriptions,
-                       labels = "FALSE,TRUE",
-                       true_labels = "TRUE",
-                       idnum = 1:length(colnames(df)))
+                       type = type,
+                       description = description,
+                       labels = labels,
+                       true_label = true_label)
+}
+
+#
+identify_factors <- function(df) {
+  rows <- map(colnames(df), ~ handle_factor(., pull(df,.)))
+  dplyr::bind_rows(rows)
 }
